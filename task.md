@@ -332,10 +332,10 @@ Legenda fase:
 
 <!-- Satu baris per fase selesai: `- YYYY-MM-DD — Fase X selesai: ringkasan`. -->
 
-- 2026-10-23 ? Fase 0 selesai: tooling pnpm/Biome/TS, workspace shared/api/mobile, README + docs.
-- 2026-10-23 ? Fase 1 selesai: tipe/schema, engine skoring, katalog 23 instrumen + test.
-- 2026-10-23 ? Fase 2 selesai: D1 schema/migrasi/seed, auth PBKDF2/JWT/refresh, middleware, rate limit, test.
-- 2026-10-23 ? Fase 3 selesai: CRUD kelas/siswa/impor, instrumen, asesmen/finalisasi/reopen/feedback/rekap/riwayat, test.
-- 2026-10-23 ? Fase 4 selesai: mobile auth, navigasi, komponen, api client refresh, test login + root.
-- 2026-10-23 ? Fase 5 selesai: kelas/siswa/impor, katalog, wizard, input skor/autosave, hasil/feedback/rekap/riwayat/reopen, ekspor, profil, test RTL.
-- 2026-10-23 ? Fase 6 selesai: builder XLSX/PDF, route ekspor R2, cleanup 30 hari, test laporan.
+- 2026-10-23 — Fase 0 selesai: tooling pnpm/Biome/TS, workspace shared/api/mobile, README + docs.
+- 2026-10-23 — Fase 1 selesai: tipe/schema, engine skoring, katalog 23 instrumen + test.
+- 2026-10-23 — Fase 2 selesai: D1 schema/migrasi/seed, auth PBKDF2/JWT/refresh, middleware, rate limit, test.
+- 2026-10-23 — Fase 3 selesai: CRUD kelas/siswa/impor, instrumen, asesmen/finalisasi/reopen/feedback/rekap/riwayat, test.
+- 2026-10-23 — Fase 4 selesai: mobile auth, navigasi, komponen, api client refresh, test login + root.
+- 2026-10-23 — Fase 5 selesai: kelas/siswa/impor, katalog, wizard, input skor/autosave, hasil/feedback/rekap/riwayat/reopen, ekspor, profil, test RTL.
+- 2026-10-23 — Fase 6 selesai: builder XLSX/PDF, route ekspor R2, cleanup 30 hari, test laporan.
