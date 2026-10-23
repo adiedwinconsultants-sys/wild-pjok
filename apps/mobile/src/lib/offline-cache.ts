@@ -37,7 +37,7 @@ export async function clearOfflineCache(): Promise<void> {
   try {
     const keys = await AsyncStorage.getAllKeys()
     const cacheKeys = keys.filter((key) => key.startsWith(PREFIX))
-    if (cacheKeys.length > 0) await AsyncStorage.multiRemove(cacheKeys)
+    if (cacheKeys.length > 0) await AsyncStorage.removeMany(cacheKeys)
   } catch {
     // Mengabaikan kegagalan pembersihan cache lokal.
   }

@@ -47,9 +47,7 @@ export default function ClassesScreen() {
         />
       </View>
 
-      {classes.data?.offline ? (
-        <OfflineNotice cachedAt={classes.data.offline.cachedAt} />
-      ) : null}
+      {classes.data?.offline ? <OfflineNotice cachedAt={classes.data.offline.cachedAt} /> : null}
 
       <TextField
         placeholder="Cari kelas atau tahun ajaran"

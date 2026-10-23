@@ -2,7 +2,7 @@
 
 Diperiksa 2026-10-23.
 
-- [x] Password PBKDF2-SHA256 ≥ 210.000 iterasi, salt 16 byte acak, perbandingan constant-time.
+- [x] Password PBKDF2-SHA256 100.000 iterasi (batas WebCrypto Cloudflare Workers), salt 16 byte acak, perbandingan constant-time.
 - [x] Access token HS256 15 menit; refresh token opaque 30 hari, disimpan sebagai hash, dirotasi, reuse mencabut semua sesi.
 - [x] Logout mencabut sesi; reset password mencabut semua sesi dan token sekali pakai.
 - [x] Rate limit login 10/menit dan forgot-password 3/15 menit; key memakai hash identifier.

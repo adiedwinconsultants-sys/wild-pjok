@@ -114,7 +114,7 @@ Definisi script ini dibuat di task 0.3 dan 0.4. Jika script berbeda di repo, **i
 - Migrasi: **jangan pernah** mengubah migrasi yang sudah di-apply. Tambah migrasi baru. Nama file `NNNN_snake_case.sql` dikelola drizzle-kit.
 - Query D1: selalu lewat Drizzle. Untuk operasi multi-tabel pakai `db.batch()`; jangan mengandalkan transaksi interaktif.
 - Pagination: `page` (1-based) + `perPage` (default 20, max 100), respons menyertakan `meta.total`.
-- Password: PBKDF2-SHA256 ≥ 210.000 iterasi, salt 16 byte acak, perbandingan constant-time. Simpan sebagai `pbkdf2_sha256$iters$salt$hash`.
+- Password: PBKDF2-SHA256 100.000 iterasi (batas WebCrypto Cloudflare Workers), salt 16 byte acak, perbandingan constant-time. Simpan sebagai `pbkdf2_sha256$iters$salt$hash`.
 - Access token 15 menit; refresh token 30 hari, disimpan sebagai hash di D1 dan dirotasi saat dipakai. Logout mencabut sesi.
 - Rate limit endpoint auth (login, forgot-password) via KV.
 - `.dev.vars` untuk secret lokal (tidak di-commit). Secret produksi via `wrangler secret put`.

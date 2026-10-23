@@ -1,5 +1,5 @@
-import { INSTRUMENTS } from '@pjok/shared'
 import { env } from 'cloudflare:test'
+import { INSTRUMENTS } from '@pjok/shared'
 import { describe, expect, it } from 'vitest'
 import { api, createTeacher, insertClass } from './helpers'
 

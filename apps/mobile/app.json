@@ -43,6 +43,17 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "e47680fa-95ce-4942-ba02-e6d9e40f3c4f"
+      }
+    },
+    "owner": "adi.edwinconsultants"
   }
 }

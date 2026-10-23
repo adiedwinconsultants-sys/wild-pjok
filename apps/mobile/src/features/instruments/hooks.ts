@@ -1,7 +1,7 @@
 ﻿import type { Instrument, MaterialGroup } from '@pjok/shared'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest, apiRequestPaginated } from '../../lib/api'
-import { fetchWithOfflineCache, type OfflineCapable } from '../../lib/offline-cache'
+import { type OfflineCapable, fetchWithOfflineCache } from '../../lib/offline-cache'
 
 export type InstrumentSummary = {
   id: string
@@ -47,7 +47,10 @@ export function useInstruments(filters: { group?: MaterialGroup; q?: string } = 
 export function useInstrument(slug: string) {
   return useQuery({
     queryKey: ['instrument', slug],
-    queryFn: () => fetchWithOfflineCache(`instrument:${slug}`, () => apiRequest<Instrument>(`/instruments/${slug}`)),
+    queryFn: () =>
+      fetchWithOfflineCache(`instrument:${slug}`, () =>
+        apiRequest<Instrument>(`/instruments/${slug}`),
+      ),
     enabled: Boolean(slug),
     staleTime: 10 * 60_000,
   })

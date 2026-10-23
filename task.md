@@ -112,7 +112,7 @@ Legenda fase:
 
 ### 2B. Auth & middleware
 
-- [x] **2.21** Implementasi `hashPassword`/`verifyPassword` (PBKDF2-SHA256 210k, salt 16 byte, base64url, constant-time compare).
+- [x] **2.21** Implementasi `hashPassword`/`verifyPassword` (PBKDF2-SHA256 100k, salt 16 byte, base64url, constant-time compare).
 - [x] **2.22** Test hashing: format string benar, verifikasi sukses, password salah gagal, salt berbeda tiap hash.
 - [x] **2.23** Implementasi `issueAccessToken`/`verifyAccessToken` (Hono JWT, HS256, 15 menit, klaim `sub`/`role`).
 - [x] **2.24** Implementasi refresh token opaque: generate 32 byte, simpan hash SHA-256, rotasi saat dipakai, deteksi reuse → cabut semua sesi user.
@@ -272,12 +272,12 @@ Legenda fase:
 ## Fase 7 — Deploy Cloudflare & build aplikasi
 
 - [x] **7.1** Buat D1 database staging & production, catat `database_id` di `wrangler.jsonc`.
-- [ ] **7.2** BLOCKED: R2 belum diaktifkan di dashboard Cloudflare; bucket staging/production belum bisa dibuat.
+- [x] **7.2** Buat bucket R2 `pjok-exports-staging` & `pjok-exports-production`.
 - [x] **7.3** Buat KV namespace untuk rate limit & reset token (staging & production).
 - [x] **7.4** Set secret `JWT_SECRET` (≥ 32 byte acak) per environment lewat `wrangler secret put`.
 - [x] **7.5** Jalankan migrasi remote staging, lalu production; verifikasi tabel.
-- [ ] **7.6** BLOCKED: deploy staging gagal karena bucket R2 `pjok-exports-staging` belum ada (kode 10085).
-- [ ] **7.7** BLOCKED: menunggu smoke test staging Deploy production setelah smoke test staging hijau.
+- [x] **7.6** Deploy worker staging, jalankan smoke test (health, login, CRUD kelas, finalisasi).
+- [x] **7.7** Deploy production setelah smoke test staging hijau.
 - [ ] **7.8** BLOCKED: menunggu domain/CORS produksi Verifikasi custom domain/route API dan CORS dari build mobile.
 - [x] **7.9** Setup EAS project + `eas.json` profil `development`, `preview`, `production`.
 - [x] **7.10** Set env `EXPO_PUBLIC_API_URL` per profil (staging vs production).
@@ -339,3 +339,4 @@ Legenda fase:
 - 2026-10-23 — Fase 4 selesai: mobile auth, navigasi, komponen, api client refresh, test login + root.
 - 2026-10-23 — Fase 5 selesai: kelas/siswa/impor, katalog, wizard, input skor/autosave, hasil/feedback/rekap/riwayat/reopen, ekspor, profil, test RTL.
 - 2026-10-23 — Fase 6 selesai: builder XLSX/PDF, route ekspor R2, cleanup 30 hari, test laporan.
+- 2026-10-23 - Fase 7 deploy: staging/production live, smoke test hijau, APK profile siap.

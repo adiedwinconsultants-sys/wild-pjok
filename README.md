@@ -17,10 +17,10 @@ pnpm install
 ## Menjalankan lokal
 
 ```bash
-# terminal 1 — API (wrangler dev, http://localhost:8787)
+# terminal 1 - API (wrangler dev, http://localhost:8787)
 pnpm dev:api
 
-# terminal 2 — mobile (Expo)
+# terminal 2 - mobile (Expo)
 pnpm dev:mobile
 ```
 
@@ -44,7 +44,7 @@ pnpm --filter @pjok/api db:migrate:local
 pnpm --filter @pjok/api db:seed          # katalog + data demo
 ```
 
-Data demo: guru `guru@demo.pjok.id` / `password123`, 3 kelas × 30 siswa, 3 asesmen final
+Data demo: guru `guru@demo.pjok.id` / `password123`, 3 kelas x 30 siswa, 3 asesmen final
 (TKSI, bola besar, atletik), dan 1 draf kebugaran jasmani.
 
 ## Perintah
@@ -59,8 +59,26 @@ Data demo: guru `guru@demo.pjok.id` / `password123`, 3 kelas × 30 siswa, 3 ases
 | `pnpm --filter @pjok/api db:generate` | Buat migrasi Drizzle |
 | `pnpm --filter @pjok/api db:migrate:local` | Terapkan migrasi lokal |
 | `pnpm --filter @pjok/api db:seed` | Seed katalog + demo |
-| `pnpm --filter @pjok/api deploy` | Deploy Worker |
+| `pnpm --filter @pjok/api deploy` | Deploy Worker production |
 | `pnpm --filter @pjok/api dump-catalog` | Regenerasi JSON katalog |
+
+## Build APK Android
+
+Build memakai EAS cloud; tidak perlu Android SDK/JDK di mesin lokal.
+
+```bash
+cd apps/mobile
+npx eas-cli@latest login          # sekali, akun Expo
+npx eas-cli@latest init           # sekali, menautkan projectId EAS
+npx eas-cli@latest build -p android --profile preview
+```
+
+- `preview`: APK internal dengan API staging.
+- `production-apk`: APK internal dengan API production.
+- `production`: AAB untuk Play Store dengan API production.
+
+Setelah build selesai, unduh APK dari tautan EAS lalu pasang di perangkat
+(`adb install <file>.apk` atau buka tautannya langsung di Android).
 
 ## Struktur
 
@@ -82,4 +100,5 @@ docs            API, skoring, model data, operasi, penerimaan
 
 ## Status
 
-Versi `0.1.0`. Fase 0–6 selesai dan terverifikasi lokal. Deploy Cloudflare/EAS menunggu kredensial lingkungan (lihat `docs/ops.md`).
+API staging dan production sudah ter-deploy di Cloudflare Workers. Build APK menunggu
+login akun EAS (lihat bagian Build APK Android).

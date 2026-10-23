@@ -11,6 +11,9 @@
 `apps/api/wrangler.jsonc` sudah memuat `database_id` D1 dan KV `id` untuk kedua lingkungan.
 Worker production bernama `wild-pjok`; staging bernama `wild-pjok-staging`.
 
+- Staging: https://wild-pjok-staging.adi-edwinconsultants.workers.dev
+- Production: https://wild-pjok.adi-edwinconsultants.workers.dev
+
 ## Prasyarat deploy
 
 ```bash
@@ -69,8 +72,8 @@ Seed demo hanya untuk QA lokal, jangan ke production.
 # staging
 wrangler deploy --env staging
 # smoke test: health, login, CRUD kelas, finalisasi
-# production (top-level, dipakai integrasi Git)
-wrangler deploy
+# production (dipakai integrasi Git)
+wrangler deploy --env production
 ```
 
 Verifikasi CORS: set `CORS_ORIGIN` sesuai origin aplikasi; untuk mobile Bearer token tidak memerlukan credentials. Custom domain diatur di dashboard Cloudflare.
@@ -85,7 +88,7 @@ dashboard Cloudflare → Worker → Settings → Build:
 | Pengaturan | Nilai |
 | --- | --- |
 | Build command | `pnpm install --frozen-lockfile` |
-| Deploy command | `cd apps/api && npx wrangler deploy` |
+| Deploy command | `cd apps/api && npx wrangler deploy --env production` |
 
 Alternatif yang setara: gunakan workflow manual `.github/workflows/deploy-api.yml`
 (`workflow_dispatch`) yang sudah menetapkan `working-directory: apps/api`.

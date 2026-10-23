@@ -1,7 +1,8 @@
 import { base64UrlToBytes, bytesToBase64Url, constantTimeEqual } from './base64'
 
 const ALGORITHM = 'pbkdf2_sha256'
-const ITERATIONS = 210_000
+// WebCrypto di Cloudflare Workers menolak PBKDF2 di atas 100.000 iterasi.
+const ITERATIONS = 100_000
 const SALT_BYTES = 16
 const KEY_BITS = 256
 

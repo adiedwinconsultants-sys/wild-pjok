@@ -316,7 +316,8 @@ function pickRawValue(
   age: number,
 ): number {
   if (indicator.rubricBands && indicator.rubricBands.length > 0) {
-    const band = indicator.rubricBands[(studentIndex + indicatorIndex) % indicator.rubricBands.length]
+    const band =
+      indicator.rubricBands[(studentIndex + indicatorIndex) % indicator.rubricBands.length]
     if (!band) throw new Error(`Rubrik ${indicator.id} kosong`)
     return (band.min + band.max) / 2
   }

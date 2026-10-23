@@ -6,20 +6,24 @@ import {
   readOfflineCache,
 } from '../src/lib/offline-cache'
 
+type InstrumentPayload = { data: Array<{ id: string }> }
+
 describe('offline cache', () => {
   beforeEach(async () => {
     await AsyncStorage.clear()
   })
 
   it('menyimpan hasil sukses dan memakainya saat jaringan gagal', async () => {
-    const online = await fetchWithOfflineCache('instruments', async () => ({
+    const online = await fetchWithOfflineCache<InstrumentPayload>('instruments', async () => ({
       data: [{ id: 'i-1' }],
     }))
 
     expect(online.offline).toBeNull()
-    expect((await readOfflineCache('instruments'))?.data).toEqual({ data: [{ id: 'i-1' }] })
+    expect((await readOfflineCache<InstrumentPayload>('instruments'))?.data).toEqual({
+      data: [{ id: 'i-1' }],
+    })
 
-    const offline = await fetchWithOfflineCache('instruments', async () => {
+    const offline = await fetchWithOfflineCache<InstrumentPayload>('instruments', async () => {
       throw new ApiError(0, 'NETWORK_ERROR', 'Tidak dapat terhubung ke server.')
     })
 

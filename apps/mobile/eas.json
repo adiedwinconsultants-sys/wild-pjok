@@ -16,12 +16,21 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://staging.pjok.example.com/v1"
+        "EXPO_PUBLIC_API_URL": "https://wild-pjok-staging.adi-edwinconsultants.workers.dev/v1"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://pjok.example.com/v1"
+        "EXPO_PUBLIC_API_URL": "https://wild-pjok.adi-edwinconsultants.workers.dev/v1"
+      }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://wild-pjok.adi-edwinconsultants.workers.dev/v1"
       }
     }
   },
