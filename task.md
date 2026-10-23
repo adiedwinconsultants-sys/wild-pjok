@@ -310,6 +310,7 @@ Legenda fase:
   - [x] **8.16b** Splash, tab bar, header stack, dan layar autentikasi (login, daftar, lupa sandi, reset sandi).
   - [x] **8.16c** Layar utama: Kelas, Asesmen, Riwayat, Profil, detail kelas, katalog, wizard, input nilai, hasil.
   - [x] **8.16d** Verifikasi `typecheck`, `lint`, dan test mobile setelah redesign.
+- [x] **8.17** Rapikan tampilan lembar nilai: header gelap terbaca, indikator dalam satu kartu ringkas tanpa duplikasi satuan/arah, penanda wajib berwarna bahaya, progres siswa selesai berwarna hijau.
 
 ## Fase 9 — WorkOS, registrasi pengguna, superadmin
 

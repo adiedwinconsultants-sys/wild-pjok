@@ -1,5 +1,4 @@
 import {
-  type Indicator,
   type RawScoreInput,
   ScoringError,
   type Sex,
@@ -247,7 +246,7 @@ export default function AssessmentInputScreen() {
         <View style={styles.row}>
           <View style={styles.flex}>
             <Text style={styles.title}>{instrument.name}</Text>
-            <Text style={styles.meta}>
+            <Text style={styles.metaInverse}>
               {formatDate(assessment.data.date)} · {participants.length} peserta
             </Text>
           </View>
@@ -275,6 +274,7 @@ export default function AssessmentInputScreen() {
           const total = instrument.indicators.length
           const filled = filledFor(student.id)
           const active = student.id === selectedStudentId
+          const complete = filled === total
           return (
             <Pressable
               key={student.id}
@@ -290,7 +290,13 @@ export default function AssessmentInputScreen() {
               >
                 {student.fullName}
               </Text>
-              <Text style={[styles.studentTabProgress, active && styles.studentTabNameActive]}>
+              <Text
+                style={[
+                  styles.studentTabProgress,
+                  complete && styles.studentTabProgressDone,
+                  active && styles.studentTabNameActive,
+                ]}
+              >
                 {filled}/{total}
               </Text>
             </Pressable>
@@ -315,23 +321,41 @@ export default function AssessmentInputScreen() {
             />
           </View>
 
-          <View style={styles.list}>
+          <Card style={styles.sheet}>
             {instrument.indicators.map((indicator, index) => {
               const value = draft[scoreKey(selectedStudent.id, indicator.id)] ?? ''
               const missing = indicator.required && value.trim() === ''
               return (
-                <IndicatorField
+                <View
                   key={indicator.id}
-                  indicator={indicator}
-                  index={index + 1}
-                  value={value}
-                  missing={missing}
-                  editable={editable}
-                  onChange={(next) => onChangeValue(selectedStudent.id, indicator.id, next)}
-                />
+                  style={[
+                    styles.sheetRow,
+                    index > 0 && styles.sheetDivider,
+                    missing && styles.sheetRowMissing,
+                  ]}
+                >
+                  <View style={styles.row}>
+                    <Text
+                      style={[styles.indicatorIndex, missing && styles.indicatorIndexMissing]}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </Text>
+                    <Text style={styles.indicatorName}>{indicator.name}</Text>
+                    <Badge label={indicator.kind === 'process' ? 'Proses' : 'Produk'} />
+                  </View>
+                  <Text style={styles.indicatorDescription}>{indicator.description}</Text>
+                  <TextField
+                    label={`Nilai (${indicator.unit})`}
+                    keyboardType="decimal-pad"
+                    value={value}
+                    editable={editable}
+                    onChangeText={(next) => onChangeValue(selectedStudent.id, indicator.id, next)}
+                    error={missing ? 'Wajib diisi' : undefined}
+                  />
+                </View>
               )
             })}
-          </View>
+          </Card>
 
           <Card variant="ink" style={styles.previewCard}>
             <SectionLabel tone="inverse">Perkiraan nilai</SectionLabel>
@@ -386,52 +410,14 @@ export default function AssessmentInputScreen() {
   )
 }
 
-function IndicatorField({
-  indicator,
-  index,
-  value,
-  missing,
-  editable,
-  onChange,
-}: {
-  indicator: Indicator
-  index: number
-  value: string
-  missing: boolean
-  editable: boolean
-  onChange: (value: string) => void
-}) {
-  return (
-    <Card rail={missing} style={missing ? styles.missingCard : undefined}>
-      <View style={styles.row}>
-        <Text style={styles.indicatorIndex}>{String(index).padStart(2, '0')}</Text>
-        <Text style={styles.indicatorName}>{indicator.name}</Text>
-        <Badge label={indicator.kind === 'process' ? 'Proses' : 'Produk'} />
-      </View>
-      <Text style={styles.meta}>
-        {indicator.description} · {indicator.unit} ·{' '}
-        {indicator.higherIsBetter ? 'semakin besar lebih baik' : 'semakin kecil lebih baik'}
-      </Text>
-      <TextField
-        label={`Nilai (${indicator.unit})`}
-        keyboardType="decimal-pad"
-        value={value}
-        editable={editable}
-        onChangeText={onChange}
-        error={missing ? 'Wajib diisi' : undefined}
-      />
-    </Card>
-  )
-}
-
 const styles = StyleSheet.create({
   board: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1, gap: spacing.xs },
   title: { ...typography.heading, color: colors.textInverse },
-  meta: { ...typography.small, color: colors.textMuted, lineHeight: 20 },
+  metaInverse: { ...typography.small, color: 'rgba(255, 255, 255, 0.72)', lineHeight: 20 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  statusDot: { width: 7, height: 7 },
+  statusDot: { width: 7, height: 7, borderRadius: radius.pill },
   saveStatus: { ...typography.label, color: 'rgba(250, 246, 234, 0.62)' },
   studentTabs: { gap: spacing.sm, marginTop: spacing.lg, paddingRight: spacing.lg },
   studentTab: {
@@ -450,6 +436,7 @@ const styles = StyleSheet.create({
   studentTabName: { ...typography.small, color: colors.text, maxWidth: 156 },
   studentTabNameActive: { color: colors.textInverse },
   studentTabProgress: { ...typography.label, color: colors.textMuted },
+  studentTabProgressDone: { color: colors.success },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -459,10 +446,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionMeta: { ...typography.small, color: colors.textMuted },
-  list: { gap: spacing.sm, marginTop: spacing.sm },
-  missingCard: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  sheet: { marginTop: spacing.sm, padding: 0, gap: 0, overflow: 'hidden' },
+  sheetRow: { padding: spacing.lg, gap: spacing.sm },
+  sheetDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  sheetRowMissing: { backgroundColor: colors.dangerSoft },
   indicatorIndex: { ...typography.monoStrong, color: colors.accent },
+  indicatorIndexMissing: { color: colors.danger },
   indicatorName: { ...typography.subheading, color: colors.text, flex: 1 },
+  indicatorDescription: { ...typography.small, color: colors.textMuted, lineHeight: 20 },
   previewCard: { marginTop: spacing.lg, gap: spacing.sm },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   previewScore: { ...typography.display, color: colors.highlight, fontSize: 62, lineHeight: 60 },
