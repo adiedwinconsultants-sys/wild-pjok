@@ -52,6 +52,7 @@
       "kv_namespaces": [{ "binding": "RATE_LIMIT", "id": "268dea40c60241d2982af2bfca6c7ac9" }]
     },
     "production": {
+      "name": "wild-pjok",
       "vars": {
         "APP_ENV": "production",
         "ACCESS_TOKEN_TTL": "900",

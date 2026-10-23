@@ -48,22 +48,6 @@ Data demo: guru `guru@demo.pjok.id` / `password123`, superadmin `superadmin@demo
 `password123`, 3 kelas x 30 siswa, 3 asesmen final (TKSI, bola besar, atletik), dan 1 draf
 kebugaran jasmani. Halaman **Profil → Kelola pengguna** hanya tampil untuk admin/superadmin.
 
-### WorkOS (opsional)
-
-Registrasi dan login email/password aktif tanpa WorkOS. Untuk mengaktifkan tombol "Lanjutkan
-dengan WorkOS", isi `.dev.vars`:
-
-```
-WORKOS_CLIENT_ID=client_...
-WORKOS_CLIENT_SECRET=sk_...
-WORKOS_API_BASE=https://api.workos.com
-```
-
-Daftarkan redirect URI di dashboard WorkOS (Authentication → Redirects), mis.
-`pjok://auth/callback` untuk development. Bila env kosong, endpoint WorkOS mengembalikan
-503 dan tombol disembunyikan di mobile. Login WorkOS membuat akun guru otomatis berdasarkan
-email; peran lanjutan diatur superadmin lewat API admin.
-
 ## Perintah
 
 | Perintah | Kegunaan |

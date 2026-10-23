@@ -31,15 +31,6 @@ export const profileUpdateSchema = z.object({
   school: z.string().trim().max(160).nullable().optional(),
 })
 
-export const workosAuthorizeInputSchema = z.object({
-  redirectUri: z.string().url('Redirect URI tidak valid').max(2048),
-})
-
-export const workosExchangeInputSchema = z.object({
-  code: z.string().min(1, 'Kode otorisasi wajib diisi').max(4096),
-  state: z.string().min(1, 'State wajib diisi').max(512),
-})
-
 export const adminUsersQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   role: z.enum(['teacher', 'admin', 'superadmin']).optional(),
@@ -57,7 +48,5 @@ export type RefreshInput = z.infer<typeof refreshInputSchema>
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>
-export type WorkosAuthorizeInput = z.infer<typeof workosAuthorizeInputSchema>
-export type WorkosExchangeInput = z.infer<typeof workosExchangeInputSchema>
 export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>

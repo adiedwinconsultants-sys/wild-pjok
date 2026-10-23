@@ -1,15 +1,8 @@
-import type {
-  LoginInput,
-  ProfileUpdateInput,
-  RegisterInput,
-  Teacher,
-  WorkosAuthResult,
-} from '@pjok/shared'
+import type { LoginInput, ProfileUpdateInput, RegisterInput, Teacher } from '@pjok/shared'
 import { create } from 'zustand'
 import { apiRequest, clearSession, getRefreshToken, hydrateTokens, persistSession } from './api'
 import { clearOfflineCache } from './offline-cache'
 import { queryClient } from './query-client'
-import { fetchWorkosStatus, startWorkosSignIn } from './workos'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
@@ -23,16 +16,14 @@ type LoginResponse = {
 type AuthState = {
   status: AuthStatus
   user: Teacher | null
-  workosEnabled: boolean
   hydrate: () => Promise<void>
   signIn: (input: LoginInput) => Promise<void>
   signUp: (input: RegisterInput) => Promise<void>
-  signInWithWorkos: () => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (input: ProfileUpdateInput) => Promise<void>
 }
 
-async function applySession(response: LoginResponse | WorkosAuthResult): Promise<Teacher> {
+async function applySession(response: LoginResponse): Promise<Teacher> {
   await persistSession({
     accessToken: response.accessToken,
     refreshToken: response.refreshToken,
@@ -45,27 +36,19 @@ async function applySession(response: LoginResponse | WorkosAuthResult): Promise
 export const useAuthStore = create<AuthState>((set) => ({
   status: 'loading',
   user: null,
-  workosEnabled: false,
 
   hydrate: async () => {
-    let workosEnabled = false
-    try {
-      workosEnabled = (await fetchWorkosStatus()).enabled
-    } catch {
-      workosEnabled = false
-    }
-
     try {
       const hasTokens = await hydrateTokens()
       if (!hasTokens) {
-        set({ status: 'unauthenticated', user: null, workosEnabled })
+        set({ status: 'unauthenticated', user: null })
         return
       }
       const user = await apiRequest<Teacher>('/auth/me')
-      set({ status: 'authenticated', user, workosEnabled })
+      set({ status: 'authenticated', user })
     } catch {
       await clearSession()
-      set({ status: 'unauthenticated', user: null, workosEnabled })
+      set({ status: 'unauthenticated', user: null })
     }
   },
 
@@ -83,13 +66,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       method: 'POST',
       body: JSON.stringify(input),
     })
-    const user = await applySession(response)
-    set({ status: 'authenticated', user })
-  },
-
-  signInWithWorkos: async () => {
-    const response = await startWorkosSignIn()
-    if (!response) return
     const user = await applySession(response)
     set({ status: 'authenticated', user })
   },

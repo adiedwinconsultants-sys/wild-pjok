@@ -19,8 +19,8 @@ export async function createTeacher(options: {
   const passwordHash = await hashPassword(password)
   const timestamp = new Date().toISOString()
   await env.DB.prepare(
-    `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'password', NULL, ?, ?)`,
+    `INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       options.id,

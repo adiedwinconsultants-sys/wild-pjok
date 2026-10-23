@@ -326,6 +326,9 @@ Legenda fase:
 - [x] **9.11** Mobile layar "Kelola pengguna" untuk superadmin: daftar, pencarian, ubah role, status penyedia login.
 - [x] **9.12** Dokumentasi `docs/api.md` + `README.md` untuk registrasi, WorkOS env/dashboard redirect, dan akun superadmin.
 - [x] **9.13** Verifikasi akhir `pnpm typecheck`, `pnpm lint`, `pnpm test`.
+- [x] **9.14** Hapus WorkOS dari API, shared, dan DB: env, route, schema, kolom `auth_provider`/`workos_user_id`, test.
+- [x] **9.15** Hapus WorkOS dari mobile dan dokumentasi: login, callback, store, admin, README/docs; verifikasi.
+- [x] **9.16** Selaraskan `@react-native-async-storage/async-storage` ke versi Expo SDK 58 (`2.2.0`) dan sesuaikan API cache offline (`multiRemove`) agar tidak error di Expo Go.
 
 ---
 
@@ -363,3 +366,4 @@ Legenda fase:
 - 2026-10-23 - Fase 7 deploy: staging/production live, smoke test hijau, APK profile siap.
 - 2026-10-23 — Fase 8 redesign selesai: palet netral ala Apple, komponen inti, splash/tab/auth, layar utama + kelola pengguna; typecheck/lint/test hijau.
 - 2026-10-23 — Fase 9 selesai: registrasi guru, WorkOS backend-mediated, superadmin + kelola pengguna, migrasi 0001, seed demo, dokumentasi; typecheck/lint/test hijau.
+- 2026-10-23 — WorkOS dihapus: shared/API/mobile/dokumentasi bersih, migrasi 0002 menghapus kolom WorkOS; typecheck/lint/test hijau (shared 25, API 23, mobile 12).

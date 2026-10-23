@@ -2,8 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import type { ReactNode } from 'react'
 
 const mockSignIn = jest.fn()
-const mockSignInWithWorkos = jest.fn()
-const mockState = { workosEnabled: false }
 
 jest.mock('expo-router', () => {
   const React = require('react')
@@ -15,18 +13,8 @@ jest.mock('expo-router', () => {
 })
 
 jest.mock('../src/lib/auth-store', () => ({
-  useAuthStore: (
-    selector: (state: {
-      signIn: typeof mockSignIn
-      signInWithWorkos: typeof mockSignInWithWorkos
-      workosEnabled: boolean
-    }) => unknown,
-  ) =>
-    selector({
-      signIn: mockSignIn,
-      signInWithWorkos: mockSignInWithWorkos,
-      workosEnabled: mockState.workosEnabled,
-    }),
+  useAuthStore: (selector: (state: { signIn: typeof mockSignIn }) => unknown) =>
+    selector({ signIn: mockSignIn }),
 }))
 
 import LoginScreen from '../app/(auth)/login'
@@ -34,8 +22,6 @@ import LoginScreen from '../app/(auth)/login'
 describe('LoginScreen', () => {
   beforeEach(() => {
     mockSignIn.mockReset()
-    mockSignInWithWorkos.mockReset()
-    mockState.workosEnabled = false
   })
 
   it('memanggil signIn untuk input valid', async () => {
@@ -64,20 +50,5 @@ describe('LoginScreen', () => {
       expect(screen.getByText('Kata sandi minimal 8 karakter')).toBeTruthy()
     })
     expect(mockSignIn).not.toHaveBeenCalled()
-  })
-
-  it('menyembunyikan tombol WorkOS bila belum dikonfigurasi', async () => {
-    await render(<LoginScreen />)
-    expect(screen.queryByText('Lanjutkan dengan WorkOS')).toBeNull()
-  })
-
-  it('memanggil signInWithWorkos saat tombol WorkOS ditekan', async () => {
-    mockState.workosEnabled = true
-    mockSignInWithWorkos.mockResolvedValue(undefined)
-    await render(<LoginScreen />)
-
-    await fireEvent.press(screen.getByText('Lanjutkan dengan WorkOS'))
-
-    await waitFor(() => expect(mockSignInWithWorkos).toHaveBeenCalled())
   })
 })

@@ -185,20 +185,20 @@ const lines: string[] = [
 
 const passwordHash = await hashPassword('password123')
 lines.push(
-  `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES (${q(
+  `INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at) VALUES (${q(
     teacherId,
   )}, ${q('guru@demo.pjok.id')}, ${q(passwordHash)}, ${q('Budi Santoso')}, ${q(
     '198001012005011001',
-  )}, ${q('SMP Negeri 1 Demo')}, ${q('teacher')}, ${q('password')}, NULL, ${q(
+  )}, ${q('SMP Negeri 1 Demo')}, ${q('teacher')}, ${q(timestamp)}, ${q(
     timestamp,
-  )}, ${q(timestamp)}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school, role = excluded.role;`,
+  )}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school, role = excluded.role;`,
 )
 lines.push(
-  `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES (${q(
+  `INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at) VALUES (${q(
     superadminId,
   )}, ${q('superadmin@demo.pjok.id')}, ${q(passwordHash)}, ${q('Superadmin Demo')}, NULL, ${q(
     'SMP Negeri 1 Demo',
-  )}, ${q('superadmin')}, ${q('password')}, NULL, ${q(timestamp)}, ${q(
+  )}, ${q('superadmin')}, ${q(timestamp)}, ${q(
     timestamp,
   )}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, role = excluded.role;`,
 )

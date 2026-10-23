@@ -10,7 +10,7 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       removeItem: async (key) => {
         store.delete(key)
       },
-      removeMany: async (keys) => {
+      multiRemove: async (keys) => {
         for (const key of keys) store.delete(key)
       },
       getAllKeys: async () => [...store.keys()],

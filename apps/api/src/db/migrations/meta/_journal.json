@@ -15,6 +15,13 @@
       "when": 1792741689627,
       "tag": "0001_cultured_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792745052077,
+      "tag": "0002_graceful_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

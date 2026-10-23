@@ -96,7 +96,6 @@ export default function AdminUsersScreen() {
                   <Text style={styles.meta}>
                     {row.classCount} kelas
                     {row.school ? ` · ${row.school}` : ''}
-                    {row.authProvider === 'workos' ? ' · WorkOS' : ''}
                   </Text>
                 </View>
                 {isSelf ? <Badge label="Anda" /> : null}

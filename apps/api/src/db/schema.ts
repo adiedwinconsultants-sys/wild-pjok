@@ -12,16 +12,11 @@ export const users = sqliteTable(
     role: text('role', { enum: ['teacher', 'admin', 'superadmin'] })
       .notNull()
       .default('teacher'),
-    authProvider: text('auth_provider', { enum: ['password', 'workos'] })
-      .notNull()
-      .default('password'),
-    workosUserId: text('workos_user_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => ({
     emailUnique: uniqueIndex('users_email_unique').on(table.email),
-    workosUnique: uniqueIndex('users_workos_user_unique').on(table.workosUserId),
   }),
 )
 

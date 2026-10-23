@@ -90,7 +90,6 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.badgeRow}>
             <Badge label={USER_ROLE_LABELS[role]} tone={isAdminRole(role) ? 'info' : 'neutral'} />
-            {user?.authProvider === 'workos' ? <Badge label="WorkOS" /> : null}
           </View>
         </View>
       </Card>

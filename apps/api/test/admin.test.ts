@@ -16,14 +16,14 @@ type AuthResponse = {
   data: {
     accessToken: string
     refreshToken: string
-    user: { id: string; email: string; role: string; authProvider: string }
+    user: { id: string; email: string; role: string }
   }
 }
 
 type ErrorResponse = { error: { code: string } }
 
 type UsersResponse = {
-  data: Array<{ id: string; email: string; role: string; authProvider: string; classCount: number }>
+  data: Array<{ id: string; email: string; role: string; classCount: number }>
   meta: { total: number }
 }
 
@@ -39,7 +39,6 @@ describe('registrasi dan admin', () => {
     expect(register.status).toBe(200)
     const payload = await json<AuthResponse>(register)
     expect(payload.data.user.role).toBe('teacher')
-    expect(payload.data.user.authProvider).toBe('password')
     expect(payload.data.accessToken.length).toBeGreaterThan(20)
 
     const login = await post('/auth/login', { email, password: 'password123' })
@@ -109,19 +108,5 @@ describe('registrasi dan admin', () => {
     expect(response.status).toBe(409)
     const error = await json<ErrorResponse>(response)
     expect(error.error.code).toBe('LAST_SUPERADMIN')
-  })
-
-  it('WorkOS belum dikonfigurasi mengembalikan status nonaktif dan 503', async () => {
-    const status = await SELF.fetch(`${BASE}/auth/workos/status`)
-    expect(status.status).toBe(200)
-    const statusPayload = await json<{ data: { enabled: boolean } }>(status)
-    expect(statusPayload.data.enabled).toBe(false)
-
-    const authorize = await post('/auth/workos/authorize', {
-      redirectUri: 'pjok://auth/callback',
-    })
-    expect(authorize.status).toBe(503)
-    const error = await json<ErrorResponse>(authorize)
-    expect(error.error.code).toBe('WORKOS_NOT_CONFIGURED')
   })
 })

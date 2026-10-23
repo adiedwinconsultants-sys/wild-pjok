@@ -11,10 +11,7 @@ import { colors, radius, spacing, typography } from '../../src/theme/tokens'
 
 export default function LoginScreen() {
   const signIn = useAuthStore((state) => state.signIn)
-  const signInWithWorkos = useAuthStore((state) => state.signInWithWorkos)
-  const workosEnabled = useAuthStore((state) => state.workosEnabled)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [workosLoading, setWorkosLoading] = useState(false)
   const {
     control,
     handleSubmit,
@@ -32,18 +29,6 @@ export default function LoginScreen() {
       setServerError(errorMessage(error))
     }
   })
-
-  const onWorkos = async () => {
-    setServerError(null)
-    setWorkosLoading(true)
-    try {
-      await signInWithWorkos()
-    } catch (error) {
-      setServerError(errorMessage(error))
-    } finally {
-      setWorkosLoading(false)
-    }
-  }
 
   return (
     <Screen keyboard>
@@ -96,26 +81,9 @@ export default function LoginScreen() {
           title="Masuk"
           onPress={() => void onSubmit()}
           loading={isSubmitting}
-          disabled={isSubmitting || workosLoading}
+          disabled={isSubmitting}
           style={styles.submit}
         />
-
-        {workosEnabled ? (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>atau</Text>
-              <View style={styles.divider} />
-            </View>
-            <Button
-              title="Lanjutkan dengan WorkOS"
-              variant="secondary"
-              loading={workosLoading}
-              disabled={isSubmitting || workosLoading}
-              onPress={() => void onWorkos()}
-            />
-          </>
-        ) : null}
       </Card>
 
       <View style={styles.links}>
@@ -168,14 +136,6 @@ const styles = StyleSheet.create({
   },
   formCard: { gap: spacing.md },
   submit: { marginTop: spacing.xs },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginVertical: spacing.xs,
-  },
-  divider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  dividerText: { ...typography.small, fontSize: 13, color: colors.textSubtle },
   error: { ...typography.small, color: colors.danger },
   links: { gap: spacing.sm, marginTop: spacing.xl, alignItems: 'center' },
   link: {

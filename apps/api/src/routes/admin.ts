@@ -106,7 +106,6 @@ function toPublicUser(row: UserRow): Teacher {
     nip: row.nip,
     school: row.school,
     role: row.role,
-    authProvider: row.authProvider,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

@@ -11,9 +11,6 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   superadmin: 'Superadmin',
 }
 
-export const AUTH_PROVIDERS = ['password', 'workos'] as const
-export type AuthProvider = (typeof AUTH_PROVIDERS)[number]
-
 export const MATERIAL_GROUPS = ['bola_besar', 'atletik', 'kebugaran_jasmani', 'tksi'] as const
 export type MaterialGroup = (typeof MATERIAL_GROUPS)[number]
 

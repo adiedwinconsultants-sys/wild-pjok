@@ -9,10 +9,6 @@ const envSchema = z.object({
   ACCESS_TOKEN_TTL: z.string().default('900'),
   CORS_ORIGIN: z.string().optional(),
   BUILD_VERSION: z.string().optional(),
-  WORKOS_CLIENT_ID: z.string().optional(),
-  WORKOS_CLIENT_SECRET: z.string().optional(),
-  WORKOS_API_BASE: z.string().url().default('https://api.workos.com'),
-  WORKOS_CONNECTION_ID: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -29,8 +25,4 @@ export function parseEnv(raw: unknown): Env {
 export function accessTokenTtl(env: Env): number {
   const ttl = Number(env.ACCESS_TOKEN_TTL)
   return Number.isFinite(ttl) && ttl > 0 ? ttl : 900
-}
-
-export function isWorkosConfigured(env: Env): boolean {
-  return Boolean(env.WORKOS_CLIENT_ID && env.WORKOS_CLIENT_SECRET)
 }
