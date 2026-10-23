@@ -1,0 +1,38 @@
+{
+  "name": "@pjok/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply pjok --local",
+    "db:migrate:remote": "wrangler d1 migrations apply pjok --remote",
+    "db:seed:local": "tsx scripts/generate-seed-sql.ts && wrangler d1 execute pjok --local --file=src/db/seed/catalog.sql",
+    "db:seed:demo": "tsx scripts/generate-demo-sql.ts && wrangler d1 execute pjok --local --file=src/db/seed/demo.sql",
+    "db:seed": "pnpm db:seed:local && pnpm db:seed:demo",
+    "dump-catalog": "pnpm --filter @pjok/shared dump-catalog"
+  },
+  "dependencies": {
+    "@pjok/shared": "workspace:*",
+    "drizzle-orm": "^0.38.3",
+    "hono": "^4.6.14",
+    "pdf-lib": "^1.17.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.6.4",
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "drizzle-kit": "^0.30.1",
+    "tsx": "^4.19.2",
+    "typescript": "5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^3.99.0"
+  }
+}

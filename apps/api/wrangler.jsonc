@@ -1,0 +1,71 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pjok-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "APP_ENV": "local",
+    "ACCESS_TOKEN_TTL": "900",
+    "CORS_ORIGIN": "http://localhost:8081"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pjok",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/db/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "EXPORTS",
+      "bucket_name": "pjok-exports"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  "env": {
+    "staging": {
+      "vars": {
+        "APP_ENV": "staging",
+        "ACCESS_TOKEN_TTL": "900",
+        "CORS_ORIGIN": "https://staging.pjok.example.com"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "pjok-staging",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "src/db/migrations"
+        }
+      ],
+      "r2_buckets": [{ "binding": "EXPORTS", "bucket_name": "pjok-exports-staging" }],
+      "kv_namespaces": [{ "binding": "RATE_LIMIT", "id": "00000000000000000000000000000000" }]
+    },
+    "production": {
+      "vars": {
+        "APP_ENV": "production",
+        "ACCESS_TOKEN_TTL": "900",
+        "CORS_ORIGIN": "https://pjok.example.com"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "pjok-production",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "src/db/migrations"
+        }
+      ],
+      "r2_buckets": [{ "binding": "EXPORTS", "bucket_name": "pjok-exports-production" }],
+      "kv_namespaces": [{ "binding": "RATE_LIMIT", "id": "00000000000000000000000000000000" }]
+    }
+  }
+}
