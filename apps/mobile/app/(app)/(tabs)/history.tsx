@@ -1,13 +1,15 @@
 import type { AssessmentStatus } from '@pjok/shared'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
-  Card,
   EmptyState,
   ErrorState,
+  ListRow,
   LoadingState,
+  PageHeader,
   Screen,
+  SectionLabel,
   Select,
   StatusBadge,
   TextField,
@@ -15,7 +17,7 @@ import {
 import { useAssessments } from '../../../src/features/assessments/hooks'
 import { errorMessage } from '../../../src/lib/api'
 import { formatDate } from '../../../src/lib/format'
-import { colors, spacing, typography } from '../../../src/theme/tokens'
+import { spacing } from '../../../src/theme/tokens'
 
 type StatusFilter = 'all' | AssessmentStatus
 
@@ -26,40 +28,42 @@ export default function HistoryScreen() {
     q: query.trim() || undefined,
     status: status === 'all' ? undefined : status,
   })
+  const rows = history.data?.data ?? []
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>RIWAYAT</Text>
-        <Text style={styles.title}>Jejak asesmen</Text>
-        <Text style={styles.subtitle}>
-          Cari asesmen lama, lanjutkan draf, atau buka hasil final.
-        </Text>
-      </View>
+      <PageHeader
+        title="Riwayat"
+        subtitle="Telusuri pengukuran lama, buka hasil final, atau lanjutkan draf."
+      />
 
-      <TextField
-        placeholder="Cari nama instrumen"
-        value={query}
-        onChangeText={setQuery}
-        autoCapitalize="none"
-      />
-      <Select<StatusFilter>
-        label="Status"
-        value={status}
-        onChange={setStatus}
-        options={[
-          { value: 'all', label: 'Semua' },
-          { value: 'draft', label: 'Draf' },
-          { value: 'finalized', label: 'Final' },
-          { value: 'reopened', label: 'Dibuka Ulang' },
-        ]}
-      />
+      <View style={styles.filters}>
+        <TextField
+          placeholder="Cari nama instrumen"
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+        />
+        <View style={styles.filterBlock}>
+          <SectionLabel>Status</SectionLabel>
+          <Select<StatusFilter>
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: 'all', label: 'Semua' },
+              { value: 'draft', label: 'Draf' },
+              { value: 'finalized', label: 'Final' },
+              { value: 'reopened', label: 'Dibuka ulang' },
+            ]}
+          />
+        </View>
+      </View>
 
       {history.isLoading ? <LoadingState message="Memuat riwayat..." /> : null}
       {history.isError ? (
         <ErrorState message={errorMessage(history.error)} onRetry={() => history.refetch()} />
       ) : null}
-      {history.isSuccess && (history.data?.data.length ?? 0) === 0 ? (
+      {history.isSuccess && rows.length === 0 ? (
         <EmptyState
           title="Riwayat kosong"
           message="Belum ada asesmen yang cocok dengan filter ini."
@@ -67,11 +71,13 @@ export default function HistoryScreen() {
       ) : null}
 
       <View style={styles.list}>
-        {(history.data?.data ?? []).map((item) => (
-          <Pressable
+        {rows.map((item) => (
+          <ListRow
             key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.status === 'draft' ? 'Lanjutkan draf' : 'Buka hasil'} ${item.instrumentName} kelas ${item.className}`}
+            icon={item.status === 'draft' ? 'create-outline' : 'checkmark-circle-outline'}
+            title={item.instrumentName}
+            subtitle={`${item.className} · ${formatDate(item.date)}`}
+            accessory={<StatusBadge status={item.status} />}
             onPress={() =>
               router.push(
                 item.status === 'draft'
@@ -79,20 +85,7 @@ export default function HistoryScreen() {
                   : `/assessments/${item.id}/results`,
               )
             }
-            style={({ pressed }) => [pressed && styles.pressed]}
-          >
-            <Card>
-              <View style={styles.row}>
-                <View style={styles.flex}>
-                  <Text style={styles.itemTitle}>{item.instrumentName}</Text>
-                  <Text style={styles.meta}>
-                    {item.className} · {formatDate(item.date)}
-                  </Text>
-                </View>
-                <StatusBadge status={item.status} />
-              </View>
-            </Card>
-          </Pressable>
+          />
         ))}
       </View>
     </Screen>
@@ -100,14 +93,7 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.xs, marginBottom: spacing.lg },
-  eyebrow: { ...typography.label, color: colors.primary, letterSpacing: 1.2 },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
-  list: { gap: spacing.md, marginTop: spacing.lg },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  flex: { flex: 1, gap: spacing.xs },
-  itemTitle: { ...typography.subheading, color: colors.text },
-  meta: { ...typography.small, color: colors.textMuted },
-  pressed: { opacity: 0.85 },
+  filters: { gap: spacing.md, marginBottom: spacing.lg },
+  filterBlock: { gap: 6 },
+  list: { gap: spacing.sm },
 })

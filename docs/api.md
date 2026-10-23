@@ -22,6 +22,7 @@ Autentikasi memakai `Authorization: Bearer <accessToken>`. Access token 15 menit
 
 | Method | Path | Keterangan |
 | --- | --- | --- |
+| POST | `/auth/register` | Body `{ name, email, password, school? }` → akun guru + token; email duplikat 409 |
 | POST | `/auth/login` | Body `{ email, password }` → access/refresh token + user |
 | POST | `/auth/refresh` | Body `{ refreshToken }` → token baru (rotasi) |
 | POST | `/auth/logout` | Bearer + opsional `{ refreshToken }` → 204 |
@@ -31,7 +32,28 @@ Autentikasi memakai `Authorization: Bearer <accessToken>`. Access token 15 menit
 | POST | `/auth/forgot-password` | `{ email }` → 202 netral; `devToken` hanya `APP_ENV=local` |
 | POST | `/auth/reset-password` | `{ token, password }`, token sekali pakai |
 
-Rate limit: login 10/menit per IP+email, forgot-password 3/15 menit.
+Rate limit: login 10/menit per IP+email, forgot-password 3/15 menit, register 5/10 menit per IP+email.
+
+### WorkOS
+
+Login WorkOS dimediasi backend; client tidak menyimpan client secret.
+
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| GET | `/auth/workos/status` | `{ enabled, clientId }`; `enabled=false` bila env belum lengkap |
+| POST | `/auth/workos/authorize` | `{ redirectUri }` → `{ url, state }`; state berlaku 10 menit di KV |
+| POST | `/auth/workos/exchange` | `{ code, state }` → token lokal + user (upsert berdasarkan email) |
+
+Bila `WORKOS_CLIENT_ID`/`WORKOS_CLIENT_SECRET` belum diatur, `authorize` dan `exchange` mengembalikan 503 `WORKOS_NOT_CONFIGURED`. Redirect URI harus terdaftar di dashboard WorkOS, mis. `pjok://auth/callback` (dev) atau scheme produksi. Rate limit `authorize` dan `exchange`: 20/10 menit per IP.
+
+## Admin
+
+Hanya `superadmin`. `admin` dan `superadmin` boleh mengakses data lintas guru; `teacher` hanya data miliknya.
+
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| GET | `/admin/users?q=&role=&page=&perPage=` | Daftar akun + `classCount` |
+| PATCH | `/admin/users/:id` | `{ role: "teacher"\|"admin"\|"superadmin" }`; superadmin terakhir tidak dapat diturunkan |
 
 ## Kelas & peserta didik
 
@@ -109,6 +131,12 @@ Job milik guru lain → 403. Berkas R2 dibersihkan otomatis setelah 30 hari oleh
 | `INVALID_CREDENTIALS` | 401 | Login gagal |
 | `INVALID_REFRESH_TOKEN` | 401 | Refresh gagal/reuse |
 | `INVALID_RESET_TOKEN` | 400 | Token reset salah/kedaluwarsa |
+| `EMAIL_ALREADY_REGISTERED` | 409 | Registrasi dengan email yang sudah ada |
+| `WORKOS_NOT_CONFIGURED` | 503 | Env WorkOS belum diatur |
+| `WORKOS_STATE_INVALID` | 400 | State WorkOS tidak ada/kedaluwarsa |
+| `WORKOS_EXCHANGE_FAILED` | 502 | Pertukaran kode WorkOS gagal |
+| `ADMIN_USER_NOT_FOUND` | 404 | Akun target tidak ada |
+| `LAST_SUPERADMIN` | 409 | Superadmin terakhir tidak boleh diturunkan |
 | `RATE_LIMITED` | 429 | Melebihi batas |
 | `FORBIDDEN` | 403 | Bukan pemilik resource |
 | `NOT_FOUND` | 404 | Endpoint tidak ada |

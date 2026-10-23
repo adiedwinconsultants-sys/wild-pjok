@@ -1,59 +1,75 @@
-import { Link, router } from 'expo-router'
+import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import {
-  Badge,
   Button,
   Card,
   EmptyState,
   ErrorState,
+  ListRow,
   LoadingState,
   OfflineNotice,
+  PageHeader,
   Screen,
+  SectionLabel,
+  Stat,
   TextField,
 } from '../../../src/components'
 import { useClasses } from '../../../src/features/classes/hooks'
 import { errorMessage } from '../../../src/lib/api'
 import { useAuthStore } from '../../../src/lib/auth-store'
-import { colors, radius, spacing, typography } from '../../../src/theme/tokens'
+import { colors, spacing, typography } from '../../../src/theme/tokens'
 
 export default function ClassesScreen() {
   const user = useAuthStore((state) => state.user)
   const [query, setQuery] = useState('')
   const classes = useClasses()
 
+  const rows = classes.data?.data ?? []
+  const totalStudents = useMemo(
+    () => rows.reduce((sum, item) => sum + item.studentCount, 0),
+    [rows],
+  )
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase()
-    const rows = classes.data?.data ?? []
     if (!term) return rows
     return rows.filter(
       (item) => item.name.toLowerCase().includes(term) || item.academicYear.includes(term),
     )
-  }, [classes.data, query])
+  }, [rows, query])
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>SELAMAT DATANG</Text>
-          <Text style={styles.title}>{user?.name ?? 'Guru PJOK'}</Text>
-          <Text style={styles.subtitle}>Kelola kelas dan peserta didik Anda.</Text>
-        </View>
-        <Button
-          title="+ Kelas"
-          fullWidth={false}
-          onPress={() => router.push('/class-form')}
-          style={styles.addButton}
-        />
-      </View>
+      <PageHeader
+        eyebrow={user?.name ? `Halo, ${user.name.split(' ')[0]}` : undefined}
+        title="Kelas"
+        subtitle="Ringkasan kelas dan peserta didik yang Anda ampu."
+      />
 
       {classes.data?.offline ? <OfflineNotice cachedAt={classes.data.offline.cachedAt} /> : null}
+
+      <View style={styles.stats}>
+        <Card variant="quiet" style={styles.statCard}>
+          <Stat value={String(rows.length)} label="Kelas" />
+        </Card>
+        <Card variant="quiet" style={styles.statCard}>
+          <Stat value={String(totalStudents)} label="Peserta didik" />
+        </Card>
+      </View>
+
+      <Button
+        title="Tambah kelas"
+        onPress={() => router.push('/class-form')}
+        style={styles.addButton}
+      />
 
       <TextField
         placeholder="Cari kelas atau tahun ajaran"
         value={query}
         onChangeText={setQuery}
         autoCapitalize="none"
+        style={styles.search}
       />
 
       {classes.isLoading ? <LoadingState message="Memuat kelas..." /> : null}
@@ -74,66 +90,50 @@ export default function ClassesScreen() {
         />
       ) : null}
 
+      {filtered.length > 0 ? (
+        <View style={styles.list}>
+          <SectionLabel>Daftar kelas</SectionLabel>
+          {filtered.map((item) => (
+            <ListRow
+              key={item.id}
+              icon="school-outline"
+              title={item.name}
+              subtitle={`Tingkat ${item.gradeLevel} · ${item.academicYear}`}
+              value={`${item.studentCount} siswa`}
+              onPress={() => router.push(`/classes/${item.id}`)}
+            />
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.list}>
-        {filtered.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Buka kelas ${item.name}`}
-            onPress={() => router.push(`/classes/${item.id}`)}
-            style={({ pressed }) => [pressed && styles.pressed]}
-          >
-            <Card>
-              <View style={styles.row}>
-                <View style={styles.flex}>
-                  <Text style={styles.className}>{item.name}</Text>
-                  <Text style={styles.meta}>
-                    Tingkat {item.gradeLevel} · {item.academicYear}
-                  </Text>
-                </View>
-                <Badge label={`${item.studentCount} siswa`} tone="info" />
-              </View>
-              {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
-            </Card>
-          </Pressable>
-        ))}
+        <SectionLabel>Materi</SectionLabel>
+        <ListRow
+          icon="library-outline"
+          title="Katalog instrumen"
+          subtitle="Indikator, norma, dan sumber penilaian"
+          onPress={() => router.push('/catalog')}
+        />
       </View>
 
-      <Link href="/catalog" style={styles.catalogLink}>
-        Jelajahi katalog instrumen
-      </Link>
+      <Text style={styles.footnote}>
+        Nilai akhir selalu dihitung ulang di server saat finalisasi.
+      </Text>
     </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  headerText: { flex: 1, gap: spacing.xs },
-  eyebrow: { ...typography.label, color: colors.primary, letterSpacing: 1.2 },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
-  addButton: { marginTop: spacing.sm, paddingHorizontal: spacing.md },
-  list: { marginTop: spacing.lg, gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  flex: { flex: 1, gap: spacing.xs },
-  className: { ...typography.heading, color: colors.text },
-  meta: { ...typography.small, color: colors.textMuted },
-  notes: { ...typography.small, color: colors.textMuted },
-  pressed: { opacity: 0.85 },
-  catalogLink: {
-    ...typography.body,
-    color: colors.primary,
+  stats: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+  statCard: { flex: 1 },
+  addButton: { marginBottom: spacing.xl },
+  search: { marginBottom: spacing.lg },
+  list: { gap: spacing.sm, marginBottom: spacing.xl },
+  footnote: {
+    ...typography.small,
+    fontSize: 13,
+    color: colors.textSubtle,
     textAlign: 'center',
-    textAlignVertical: 'center',
-    minHeight: 48,
-    marginTop: spacing.xl,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    marginTop: spacing.sm,
   },
 })

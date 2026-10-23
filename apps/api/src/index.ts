@@ -5,6 +5,7 @@ import type { Env } from './env'
 import { contextMiddleware } from './middleware/context'
 import { errorHandler } from './middleware/error-handler'
 import { cleanupExpiredExports } from './reports/cleanup'
+import { adminRoutes } from './routes/admin'
 import { assessmentRoutes } from './routes/assessments'
 import { authRoutes } from './routes/auth'
 import { classRoutes } from './routes/classes'
@@ -50,6 +51,7 @@ app.notFound((c) =>
 const v1 = new Hono<AppBindings>()
 v1.route('/health', healthRoutes)
 v1.route('/auth', authRoutes)
+v1.route('/admin', adminRoutes)
 v1.route('/classes', classRoutes)
 v1.route('/classes', classStudentRoutes)
 v1.route('/students', studentRoutes)

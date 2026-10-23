@@ -1,5 +1,18 @@
-export const USER_ROLES = ['teacher', 'admin'] as const
+export const USER_ROLES = ['teacher', 'admin', 'superadmin'] as const
 export type UserRole = (typeof USER_ROLES)[number]
+
+export function isAdminRole(role: UserRole): boolean {
+  return role === 'admin' || role === 'superadmin'
+}
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  teacher: 'Guru',
+  admin: 'Admin',
+  superadmin: 'Superadmin',
+}
+
+export const AUTH_PROVIDERS = ['password', 'workos'] as const
+export type AuthProvider = (typeof AUTH_PROVIDERS)[number]
 
 export const MATERIAL_GROUPS = ['bola_besar', 'atletik', 'kebugaran_jasmani', 'tksi'] as const
 export type MaterialGroup = (typeof MATERIAL_GROUPS)[number]

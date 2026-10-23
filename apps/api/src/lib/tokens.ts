@@ -7,7 +7,7 @@ import { AppError } from './errors'
 
 const claimsSchema = z.object({
   sub: z.string(),
-  role: z.enum(['teacher', 'admin']),
+  role: z.enum(['teacher', 'admin', 'superadmin']),
   email: z.string(),
   name: z.string(),
   exp: z.number(),

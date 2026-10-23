@@ -1,9 +1,29 @@
+import { USER_ROLE_LABELS, isAdminRole } from '@pjok/shared'
+import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Alert, StyleSheet, Text, View } from 'react-native'
-import { Badge, Button, Card, Screen, TextField } from '../../../src/components'
+import {
+  Badge,
+  Button,
+  Card,
+  ListRow,
+  PageHeader,
+  Screen,
+  SectionLabel,
+  TextField,
+} from '../../../src/components'
 import { errorMessage } from '../../../src/lib/api'
 import { useAuthStore } from '../../../src/lib/auth-store'
-import { colors, spacing, typography } from '../../../src/theme/tokens'
+import { colors, radius, spacing, typography } from '../../../src/theme/tokens'
+
+function initialsOf(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
 
 export default function ProfileScreen() {
   const user = useAuthStore((state) => state.user)
@@ -52,45 +72,93 @@ export default function ProfileScreen() {
     ])
   }
 
+  const role = user?.role ?? 'teacher'
+
   return (
     <Screen keyboard>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>PROFIL</Text>
-        <Text style={styles.title}>{user?.name ?? 'Guru'}</Text>
-        <Text style={styles.subtitle}>{user?.email}</Text>
-        <Badge label="Guru PJOK" tone="info" />
-      </View>
+      <PageHeader
+        title="Profil"
+        subtitle="Nama, NIP, dan sekolah dipakai pada kop laporan Excel/PDF."
+      />
 
-      <Card>
-        <Text style={styles.cardTitle}>Identitas laporan</Text>
-        <Text style={styles.cardHint}>
-          Nama, NIP, dan sekolah dipakai pada kop laporan Excel/PDF.
-        </Text>
-        <TextField label="Nama lengkap" value={name} onChangeText={setName} />
-        <TextField label="NIP" value={nip} onChangeText={setNip} keyboardType="number-pad" />
-        <TextField label="Sekolah" value={school} onChangeText={setSchool} />
-        {message ? <Text style={styles.success}>{message}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button
-          title={saving ? 'Menyimpan...' : 'Simpan profil'}
-          onPress={onSave}
-          loading={saving}
-        />
+      <Card variant="quiet" style={styles.identity}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initialsOf(user?.name ?? 'Guru')}</Text>
+        </View>
+        <View style={styles.identityTexts}>
+          <Text style={styles.name}>{user?.name ?? 'Guru'}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
+          <View style={styles.badgeRow}>
+            <Badge label={USER_ROLE_LABELS[role]} tone={isAdminRole(role) ? 'info' : 'neutral'} />
+            {user?.authProvider === 'workos' ? <Badge label="WorkOS" /> : null}
+          </View>
+        </View>
       </Card>
 
-      <Button title="Keluar" variant="danger" onPress={onLogout} style={styles.logout} />
+      <View style={styles.section}>
+        <SectionLabel>Data laporan</SectionLabel>
+        <Card style={styles.formCard}>
+          <TextField label="Nama lengkap" value={name} onChangeText={setName} />
+          <TextField
+            label="NIP / NUPTK"
+            value={nip}
+            onChangeText={setNip}
+            keyboardType="number-pad"
+          />
+          <TextField label="Sekolah" value={school} onChangeText={setSchool} />
+          {message ? <Text style={styles.success}>{message}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button
+            title={saving ? 'Menyimpan...' : 'Simpan profil'}
+            onPress={() => void onSave()}
+            loading={saving}
+          />
+        </Card>
+      </View>
+
+      {isAdminRole(role) ? (
+        <View style={styles.section}>
+          <SectionLabel>Administrasi</SectionLabel>
+          <ListRow
+            icon="shield-checkmark-outline"
+            title="Kelola pengguna"
+            subtitle="Lihat akun dan ubah peran guru"
+            onPress={() => router.push('/admin/users')}
+          />
+        </View>
+      ) : null}
+
+      <Button title="Keluar dari akun" variant="ghost" onPress={onLogout} style={styles.logout} />
+      <Text style={styles.version}>PJOK Asesmen · Versi 1.0</Text>
     </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.xs, marginBottom: spacing.xl },
-  eyebrow: { ...typography.label, color: colors.primary, letterSpacing: 1.2 },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
-  cardTitle: { ...typography.heading, color: colors.text },
-  cardHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.sm },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceInk,
+  },
+  avatarText: { ...typography.subheading, color: colors.textInverse, fontSize: 20 },
+  identityTexts: { flex: 1, gap: 3 },
+  name: { ...typography.heading, color: colors.text },
+  email: { ...typography.small, color: colors.textMuted },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
+  section: { gap: spacing.sm, marginTop: spacing.xl },
+  formCard: { gap: spacing.md },
   success: { ...typography.small, color: colors.success },
   error: { ...typography.small, color: colors.danger },
   logout: { marginTop: spacing.xl },
+  version: {
+    ...typography.small,
+    fontSize: 13,
+    color: colors.textSubtle,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
 })

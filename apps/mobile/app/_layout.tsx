@@ -6,7 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/lib/auth-store'
 import { queryClient } from '../src/lib/query-client'
-import { colors, spacing, typography } from '../src/theme/tokens'
+import { colors, radius, spacing, typography } from '../src/theme/tokens'
 
 export default function RootLayout() {
   const status = useAuthStore((state) => state.status)
@@ -22,9 +22,12 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         {status === 'loading' ? (
           <View style={styles.splash}>
+            <View style={styles.logo}>
+              <Text style={styles.logoText}>PJOK</Text>
+            </View>
             <Text style={styles.brand}>PJOK Asesmen</Text>
             <Text style={styles.tagline}>Penilaian gerak yang terukur</Text>
-            <ActivityIndicator color={colors.primary} style={styles.spinner} />
+            <ActivityIndicator color={colors.textSubtle} style={styles.spinner} />
           </View>
         ) : (
           <Stack
@@ -42,13 +45,28 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: colors.background,
     padding: spacing.xl,
     gap: spacing.xs,
   },
-  brand: { ...typography.title, color: colors.primary },
-  tagline: { ...typography.body, color: colors.textMuted },
-  spinner: { marginTop: spacing.lg },
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceInk,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  logoText: {
+    ...typography.subheading,
+    color: colors.textInverse,
+    fontSize: 18,
+    letterSpacing: 0.4,
+  },
+  brand: { ...typography.heading, color: colors.text },
+  tagline: { ...typography.small, color: colors.textMuted },
+  spinner: { marginTop: spacing.xl },
 })

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { colors, spacing } from '../theme/tokens'
@@ -46,5 +46,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingBottom: spacing.xxl },
   content: { flexGrow: 1 },
-  padded: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  padded: { paddingHorizontal: 20, paddingTop: spacing.md },
 })

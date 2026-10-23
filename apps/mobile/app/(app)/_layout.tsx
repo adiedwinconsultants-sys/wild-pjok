@@ -1,6 +1,6 @@
 import { Redirect, Stack } from 'expo-router'
 import { useAuthStore } from '../../src/lib/auth-store'
-import { colors } from '../../src/theme/tokens'
+import { colors, fonts } from '../../src/theme/tokens'
 
 export default function AppLayout() {
   const status = useAuthStore((state) => state.status)
@@ -9,25 +9,28 @@ export default function AppLayout() {
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.text,
+        headerTintColor: colors.primary,
         headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '600' },
+        headerTitleAlign: 'center',
+        headerBackTitle: 'Kembali',
+        headerTitleStyle: { fontFamily: fonts.bodySemiBold, fontSize: 17 },
         contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="classes/[id]" options={{ title: 'Detail Kelas' }} />
-      <Stack.Screen name="class-form" options={{ title: 'Form Kelas', presentation: 'modal' }} />
-      <Stack.Screen name="student-form" options={{ title: 'Form Siswa', presentation: 'modal' }} />
+      <Stack.Screen name="classes/[id]" options={{ title: 'Detail kelas' }} />
+      <Stack.Screen name="class-form" options={{ title: 'Kelas', presentation: 'modal' }} />
+      <Stack.Screen name="student-form" options={{ title: 'Siswa', presentation: 'modal' }} />
       <Stack.Screen
         name="import-students"
         options={{ title: 'Impor Excel', presentation: 'modal' }}
       />
-      <Stack.Screen name="catalog/index" options={{ title: 'Katalog Instrumen' }} />
-      <Stack.Screen name="catalog/[slug]" options={{ title: 'Panduan Instrumen' }} />
-      <Stack.Screen name="assessments/new" options={{ title: 'Asesmen Baru' }} />
-      <Stack.Screen name="assessments/[id]" options={{ title: 'Input Nilai' }} />
-      <Stack.Screen name="assessments/[id]/results" options={{ title: 'Hasil Asesmen' }} />
+      <Stack.Screen name="catalog/index" options={{ title: 'Katalog' }} />
+      <Stack.Screen name="catalog/[slug]" options={{ title: 'Instrumen' }} />
+      <Stack.Screen name="assessments/new" options={{ title: 'Asesmen baru' }} />
+      <Stack.Screen name="assessments/[id]" options={{ title: 'Input nilai' }} />
+      <Stack.Screen name="assessments/[id]/results" options={{ title: 'Hasil asesmen' }} />
+      <Stack.Screen name="admin/users" options={{ title: 'Kelola pengguna' }} />
     </Stack>
   )
 }

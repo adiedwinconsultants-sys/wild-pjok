@@ -1,5 +1,5 @@
 -- Seed demo (idempoten).
--- Cakupan: 3 kelas x 30 siswa, 4 grup materi, 3 asesmen final + 1 draf.
+-- Cakupan: 1 superadmin, 1 guru, 3 kelas x 30 siswa, 4 grup materi, 3 asesmen final + 1 draf.
 DELETE FROM assessment_feedback WHERE result_id IN (SELECT r.id FROM assessment_results r JOIN assessments a ON a.id = r.assessment_id WHERE a.teacher_id = 'demo-teacher');
 DELETE FROM assessment_results WHERE assessment_id IN (SELECT id FROM assessments WHERE teacher_id = 'demo-teacher');
 DELETE FROM assessment_scores WHERE assessment_id IN (SELECT id FROM assessments WHERE teacher_id = 'demo-teacher');
@@ -7,7 +7,9 @@ DELETE FROM assessments WHERE teacher_id = 'demo-teacher';
 DELETE FROM students WHERE teacher_id = 'demo-teacher';
 DELETE FROM classes WHERE teacher_id = 'demo-teacher';
 DELETE FROM users WHERE id = 'demo-teacher';
-INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at) VALUES ('demo-teacher', 'guru@demo.pjok.id', 'pbkdf2_sha256$100000$56w1PzkMIzAq2hDDHFjQ9Q$CC7g8yRYe3NclhHRe_0CO43kEhiw4PTzJgsVrW-TR6A', 'Budi Santoso', '198001012005011001', 'SMP Negeri 1 Demo', 'teacher', '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school;
+DELETE FROM users WHERE id = 'demo-superadmin';
+INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES ('demo-teacher', 'guru@demo.pjok.id', 'pbkdf2_sha256$100000$57JMazGGzqn_Xn1B8Uez0w$FB0Q91y_3Sgbl4XEb-2YaJjPHaZ8muq7nxT4ENaG9hU', 'Budi Santoso', '198001012005011001', 'SMP Negeri 1 Demo', 'teacher', 'password', NULL, '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school, role = excluded.role;
+INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES ('demo-superadmin', 'superadmin@demo.pjok.id', 'pbkdf2_sha256$100000$57JMazGGzqn_Xn1B8Uez0w$FB0Q91y_3Sgbl4XEb-2YaJjPHaZ8muq7nxT4ENaG9hU', 'Superadmin Demo', NULL, 'SMP Negeri 1 Demo', 'superadmin', 'password', NULL, '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, role = excluded.role;
 INSERT INTO classes (id, teacher_id, name, grade_level, academic_year, notes, created_at, updated_at) VALUES ('demo-class-7a', 'demo-teacher', 'VII A', 7, '2025/2026', 'Kelas demo untuk asesmen TKSI terpadu', '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET name = excluded.name, notes = excluded.notes;
 INSERT INTO classes (id, teacher_id, name, grade_level, academic_year, notes, created_at, updated_at) VALUES ('demo-class-8b', 'demo-teacher', 'VIII B', 8, '2025/2026', 'Kelas demo untuk penilaian proses bola besar', '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET name = excluded.name, notes = excluded.notes;
 INSERT INTO classes (id, teacher_id, name, grade_level, academic_year, notes, created_at, updated_at) VALUES ('demo-class-9c', 'demo-teacher', 'IX C', 9, '2025/2026', 'Kelas demo untuk asesmen produk atletik', '2026-10-01T08:00:00.000Z', '2026-10-01T08:00:00.000Z') ON CONFLICT(id) DO UPDATE SET name = excluded.name, notes = excluded.notes;

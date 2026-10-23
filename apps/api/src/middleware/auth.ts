@@ -1,4 +1,4 @@
-import type { UserRole } from '@pjok/shared'
+import { type UserRole, isAdminRole } from '@pjok/shared'
 import type { MiddlewareHandler } from 'hono'
 import { AppError, forbidden, unauthorized } from '../lib/errors'
 import { verifyAccessToken } from '../lib/tokens'
@@ -38,7 +38,7 @@ export function requireRole(...roles: UserRole[]): MiddlewareHandler<AppBindings
 }
 
 export function assertOwnership(resourceTeacherId: string, user: AuthUser): void {
-  if (user.role === 'admin') return
+  if (isAdminRole(user.role)) return
   if (resourceTeacherId !== user.id) {
     throw new AppError(403, 'FORBIDDEN', 'Anda tidak berhak mengakses sumber daya ini')
   }

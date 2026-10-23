@@ -6,9 +6,11 @@ import {
   Badge,
   Button,
   Card,
+  EmptyState,
   ErrorState,
   LoadingState,
   Screen,
+  SectionLabel,
   Select,
   TextField,
 } from '../../../src/components'
@@ -17,9 +19,11 @@ import { useClassStudents, useClasses } from '../../../src/features/classes/hook
 import { useInstrument, useInstruments } from '../../../src/features/instruments/hooks'
 import { errorMessage } from '../../../src/lib/api'
 import { formatDate, groupLabel, todayIso } from '../../../src/lib/format'
-import { colors, radius, spacing, typography } from '../../../src/theme/tokens'
+import { colors, spacing, typography } from '../../../src/theme/tokens'
 
 type GroupFilter = 'all' | MaterialGroup
+
+const stepTitles = ['Pilih kelas', 'Pilih instrumen', 'Tanggal dan peserta']
 
 export default function NewAssessmentScreen() {
   const params = useLocalSearchParams<{ instrumentSlug?: string }>()
@@ -94,16 +98,19 @@ export default function NewAssessmentScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>LANGKAH {progress}</Text>
-        <Text style={styles.title}>
-          {step === 1 ? 'Pilih kelas' : step === 2 ? 'Pilih instrumen' : 'Tanggal & peserta'}
-        </Text>
+        <View style={styles.headerTop}>
+          <SectionLabel>Langkah {progress}</SectionLabel>
+          <Text style={styles.stepIndex}>0{step}</Text>
+        </View>
+        <Text style={styles.title}>{stepTitles[step - 1]}</Text>
         <View style={styles.progress}>
           {[1, 2, 3].map((item) => (
-            <View
-              key={item}
-              style={[styles.progressBar, item <= step && styles.progressBarActive]}
-            />
+            <View key={item} style={styles.progressItem}>
+              <View style={[styles.progressBar, item <= step && styles.progressBarActive]} />
+              <Text style={[styles.progressLabel, item <= step && styles.progressLabelActive]}>
+                {String(item).padStart(2, '0')}
+              </Text>
+            </View>
           ))}
         </View>
       </View>
@@ -115,35 +122,41 @@ export default function NewAssessmentScreen() {
             <ErrorState message={errorMessage(classes.error)} onRetry={() => classes.refetch()} />
           ) : null}
           <View style={styles.list}>
-            {(classes.data?.data ?? []).map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="radio"
-                accessibilityLabel={`Kelas ${item.name}, tingkat ${item.gradeLevel}, ${item.studentCount} siswa`}
-                accessibilityState={{ selected: classId === item.id }}
-                onPress={() => {
-                  setClassId(item.id)
-                  setSelected(new Set())
-                }}
-              >
-                <Card style={classId === item.id ? styles.selectedCard : undefined}>
-                  <View style={styles.row}>
-                    <View style={styles.flex}>
-                      <Text style={styles.itemTitle}>{item.name}</Text>
-                      <Text style={styles.meta}>
-                        Tingkat {item.gradeLevel} · {item.studentCount} siswa
-                      </Text>
+            {(classes.data?.data ?? []).map((item, index) => {
+              const active = classId === item.id
+              return (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Kelas ${item.name}, tingkat ${item.gradeLevel}, ${item.studentCount} siswa`}
+                  accessibilityState={{ selected: active }}
+                  onPress={() => {
+                    setClassId(item.id)
+                    setSelected(new Set())
+                  }}
+                >
+                  <Card rail={active} style={active ? styles.selectedCard : undefined}>
+                    <View style={styles.row}>
+                      <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
+                      <View style={styles.flex}>
+                        <Text style={styles.itemTitle}>{item.name}</Text>
+                        <Text style={styles.meta}>
+                          Tingkat {item.gradeLevel} · {item.studentCount} siswa ·{' '}
+                          {item.academicYear}
+                        </Text>
+                      </View>
+                      {active ? <Badge label="Dipilih" tone="success" /> : null}
                     </View>
-                    {classId === item.id ? <Badge label="Dipilih" tone="success" /> : null}
-                  </View>
-                </Card>
-              </Pressable>
-            ))}
+                  </Card>
+                </Pressable>
+              )
+            })}
           </View>
           {classes.isSuccess && (classes.data?.data.length ?? 0) === 0 ? (
-            <Card>
-              <Text style={styles.meta}>Belum ada kelas. Tambahkan kelas terlebih dahulu.</Text>
-            </Card>
+            <EmptyState
+              title="Belum ada kelas"
+              message="Tambahkan kelas terlebih dahulu sebelum membuat asesmen."
+            />
           ) : null}
           <Button
             title="Lanjut"
@@ -167,7 +180,7 @@ export default function NewAssessmentScreen() {
             onChange={setGroup}
             options={[
               { value: 'all', label: 'Semua' },
-              { value: 'bola_besar', label: 'Bola Besar' },
+              { value: 'bola_besar', label: 'Bola besar' },
               { value: 'atletik', label: 'Atletik' },
               { value: 'kebugaran_jasmani', label: 'Kebugaran' },
               { value: 'tksi', label: 'TKSI' },
@@ -181,25 +194,29 @@ export default function NewAssessmentScreen() {
             />
           ) : null}
           <View style={styles.list}>
-            {(instruments.data?.data ?? []).map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="radio"
-                accessibilityLabel={`Instrumen ${item.name}, ${groupLabel(item.group)}`}
-                accessibilityState={{ selected: instrumentSlug === item.slug }}
-                onPress={() => setInstrumentSlug(item.slug)}
-              >
-                <Card style={instrumentSlug === item.slug ? styles.selectedCard : undefined}>
-                  <View style={styles.row}>
-                    <View style={styles.flex}>
-                      <Text style={styles.itemTitle}>{item.name}</Text>
-                      <Text style={styles.meta}>{groupLabel(item.group)}</Text>
+            {(instruments.data?.data ?? []).map((item, index) => {
+              const active = instrumentSlug === item.slug
+              return (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Instrumen ${item.name}, ${groupLabel(item.group)}`}
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setInstrumentSlug(item.slug)}
+                >
+                  <Card rail={active} style={active ? styles.selectedCard : undefined}>
+                    <View style={styles.row}>
+                      <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
+                      <View style={styles.flex}>
+                        <Text style={styles.itemTitle}>{item.name}</Text>
+                        <Text style={styles.meta}>{groupLabel(item.group)}</Text>
+                      </View>
+                      {active ? <Badge label="Dipilih" tone="success" /> : null}
                     </View>
-                    {instrumentSlug === item.slug ? <Badge label="Dipilih" tone="success" /> : null}
-                  </View>
-                </Card>
-              </Pressable>
-            ))}
+                  </Card>
+                </Pressable>
+              )
+            })}
           </View>
           <View style={styles.actions}>
             <Button title="Kembali" variant="ghost" fullWidth={false} onPress={() => setStep(1)} />
@@ -224,16 +241,21 @@ export default function NewAssessmentScreen() {
             hint="Tanggal menentukan kelompok usia norma."
           />
           {instrument.data ? (
-            <Card>
-              <Text style={styles.itemTitle}>{instrument.data.name}</Text>
-              <Text style={styles.meta}>
-                {selectedClass?.name ?? 'Kelas'} · {instrument.data.indicators.length} indikator
+            <Card variant="ink">
+              <SectionLabel tone="inverse">Ringkasan</SectionLabel>
+              <Text style={styles.summaryTitle}>{instrument.data.name}</Text>
+              <Text style={styles.summaryMeta}>
+                {selectedClass?.name ?? 'Kelas'} · {instrument.data.indicators.length} indikator ·{' '}
+                {formatDate(date)}
               </Text>
             </Card>
           ) : null}
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Peserta didik</Text>
+            <View style={styles.flex}>
+              <SectionLabel>Peserta didik</SectionLabel>
+              <Text style={styles.sectionMeta}>Semua siswa dipilih secara default.</Text>
+            </View>
             <Badge label={`${selected.size}/${studentRows.length} dipilih`} tone="info" />
           </View>
           {students.isLoading ? <LoadingState message="Memuat siswa..." /> : null}
@@ -241,7 +263,7 @@ export default function NewAssessmentScreen() {
             <ErrorState message={errorMessage(students.error)} onRetry={() => students.refetch()} />
           ) : null}
           <View style={styles.list}>
-            {studentRows.map((student) => {
+            {studentRows.map((student, index) => {
               const checked = selected.has(student.id)
               return (
                 <Pressable
@@ -253,13 +275,14 @@ export default function NewAssessmentScreen() {
                 >
                   <Card style={checked ? styles.selectedCard : undefined}>
                     <View style={styles.row}>
-                      <View style={styles.checkbox}>
+                      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
                         {checked ? <Text style={styles.checkmark}>✓</Text> : null}
                       </View>
                       <View style={styles.flex}>
                         <Text style={styles.itemTitle}>{student.fullName}</Text>
                         <Text style={styles.meta}>NIS {student.nis}</Text>
                       </View>
+                      <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
                     </View>
                   </Card>
                 </Pressable>
@@ -267,16 +290,12 @@ export default function NewAssessmentScreen() {
             })}
           </View>
           {studentRows.length === 0 && students.isSuccess ? (
-            <Card>
-              <Text style={styles.meta}>
-                Kelas ini belum memiliki siswa. Tambahkan siswa lalu kembali ke layar ini.
-              </Text>
-            </Card>
+            <EmptyState
+              title="Kelas belum memiliki siswa"
+              message="Tambahkan siswa ke kelas ini, lalu buka kembali layar asesmen."
+            />
           ) : null}
 
-          <Text style={styles.summary}>
-            {selectedClass?.name ?? '-'} · {instrument.data?.name ?? '-'} · {formatDate(date)}
-          </Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Button title="Kembali" variant="ghost" fullWidth={false} onPress={() => setStep(2)} />
@@ -295,20 +314,20 @@ export default function NewAssessmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.xs, marginBottom: spacing.lg },
-  eyebrow: { ...typography.label, color: colors.primary, letterSpacing: 1.2 },
+  header: { gap: spacing.xs, marginBottom: spacing.xl },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stepIndex: { ...typography.title, color: colors.borderStrong, fontSize: 44, lineHeight: 38 },
   title: { ...typography.title, color: colors.text },
-  progress: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
-  progressBar: {
-    flex: 1,
-    height: 5,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-  },
-  progressBarActive: { backgroundColor: colors.primary },
-  list: { gap: spacing.md, marginTop: spacing.md },
+  progress: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  progressItem: { flex: 1, gap: spacing.xs },
+  progressBar: { height: 4, backgroundColor: colors.surfaceMuted },
+  progressBarActive: { backgroundColor: colors.accent },
+  progressLabel: { ...typography.label, color: colors.textMuted },
+  progressLabelActive: { color: colors.accent },
+  list: { gap: spacing.sm, marginTop: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   flex: { flex: 1, gap: spacing.xs },
+  index: { ...typography.monoStrong, color: colors.accent },
   itemTitle: { ...typography.subheading, color: colors.text },
   meta: { ...typography.small, color: colors.textMuted },
   selectedCard: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
@@ -317,20 +336,24 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
-  sectionTitle: { ...typography.heading, color: colors.text },
+  sectionMeta: { ...typography.small, color: colors.textMuted },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.sm,
+    width: 26,
+    height: 26,
+    borderRadius: 3,
     borderWidth: 2,
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmark: { color: colors.primary, fontWeight: '700' },
-  summary: { ...typography.small, color: colors.textMuted, marginTop: spacing.lg },
+  checkboxChecked: { backgroundColor: colors.primary },
+  checkmark: { color: colors.highlight, fontSize: 14, lineHeight: 18 },
+  summaryTitle: { ...typography.heading, color: colors.textInverse },
+  summaryMeta: { ...typography.small, color: 'rgba(250, 246, 234, 0.7)' },
   error: { ...typography.small, color: colors.danger, marginTop: spacing.sm },
 })

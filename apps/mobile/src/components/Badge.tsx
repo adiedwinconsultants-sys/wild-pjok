@@ -8,18 +8,35 @@ type BadgeProps = {
 }
 
 const tones = {
-  neutral: { backgroundColor: colors.surfaceMuted, color: colors.textMuted },
-  success: { backgroundColor: colors.successSoft, color: colors.success },
-  warning: { backgroundColor: colors.accentSoft, color: colors.accent },
-  danger: { backgroundColor: colors.dangerSoft, color: colors.danger },
-  info: { backgroundColor: colors.infoSoft, color: colors.info },
+  neutral: {
+    backgroundColor: colors.surfaceMuted,
+    color: colors.textMuted,
+  },
+  success: {
+    backgroundColor: colors.successSoft,
+    color: colors.success,
+  },
+  warning: {
+    backgroundColor: colors.primarySoft,
+    color: colors.primary,
+  },
+  danger: {
+    backgroundColor: colors.dangerSoft,
+    color: colors.danger,
+  },
+  info: {
+    backgroundColor: colors.infoSoft,
+    color: colors.info,
+  },
 } as const
 
 export function Badge({ label, tone = 'neutral' }: BadgeProps) {
   const palette = tones[tone]
   return (
     <View style={[styles.badge, { backgroundColor: palette.backgroundColor }]}>
-      <Text style={[styles.text, { color: palette.color }]}>{label}</Text>
+      <Text style={[styles.text, { color: palette.color }]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   )
 }
@@ -38,7 +55,7 @@ export function CategoryBadge({ category, label }: { category: ScoreCategory; la
 const statusLabel: Record<AssessmentStatus, string> = {
   draft: 'Draf',
   finalized: 'Final',
-  reopened: 'Dibuka Ulang',
+  reopened: 'Dibuka ulang',
 }
 
 const statusTone: Record<AssessmentStatus, BadgeProps['tone']> = {
@@ -54,9 +71,13 @@ export function StatusBadge({ status }: { status: AssessmentStatus }) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
     borderRadius: radius.pill,
   },
-  text: { ...typography.small, fontWeight: '600' },
+  text: {
+    ...typography.label,
+    fontSize: 12,
+    lineHeight: 16,
+  },
 })

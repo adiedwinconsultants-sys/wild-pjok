@@ -3,8 +3,8 @@ import { type ForgotPasswordInput, forgotPasswordInputSchema } from '@pjok/share
 import { Link } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { StyleSheet, Text, View } from 'react-native'
-import { Button, Card, Screen, TextField } from '../../src/components'
+import { StyleSheet, Text } from 'react-native'
+import { Button, Card, PageHeader, Screen, TextField } from '../../src/components'
 import { apiRequest, errorMessage } from '../../src/lib/api'
 import { colors, spacing, typography } from '../../src/theme/tokens'
 
@@ -36,13 +36,11 @@ export default function ForgotPasswordScreen() {
 
   return (
     <Screen keyboard>
-      <View style={styles.header}>
-        <Text style={styles.title}>Pulihkan akses</Text>
-        <Text style={styles.subtitle}>
-          Masukkan email terdaftar. Kami akan mengirim tautan pemulihan bila email tersebut aktif.
-        </Text>
-      </View>
-      <Card>
+      <PageHeader
+        title="Lupa kata sandi"
+        subtitle="Masukkan email terdaftar. Kami akan mengirim tautan pemulihan bila email tersebut aktif."
+      />
+      <Card style={styles.card}>
         <Controller
           control={control}
           name="email"
@@ -62,29 +60,28 @@ export default function ForgotPasswordScreen() {
         {message ? <Text style={styles.success}>{message}</Text> : null}
         {serverError ? <Text style={styles.error}>{serverError}</Text> : null}
         <Button
-          title={isSubmitting ? 'Mengirim...' : 'Kirim tautan pemulihan'}
+          title={isSubmitting ? 'Mengirim...' : 'Kirim tautan'}
           onPress={() => void onSubmit()}
           loading={isSubmitting}
         />
-        <Link href="/login" style={styles.link}>
-          Kembali ke halaman masuk
-        </Link>
       </Card>
+      <Link href="/login" style={styles.link}>
+        Kembali ke halaman masuk
+      </Link>
     </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  header: { marginTop: spacing.xl, marginBottom: spacing.xl, gap: spacing.sm },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, lineHeight: 22 },
+  card: { gap: spacing.md },
   success: { ...typography.small, color: colors.success },
   error: { ...typography.small, color: colors.danger },
   link: {
-    ...typography.body,
+    ...typography.subheading,
     color: colors.primary,
     textAlign: 'center',
     minHeight: 44,
     paddingVertical: spacing.md,
+    marginTop: spacing.lg,
   },
 })

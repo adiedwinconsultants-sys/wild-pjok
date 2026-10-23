@@ -4,12 +4,17 @@ import {
   loginInputSchema,
   profileUpdateSchema,
   refreshInputSchema,
+  registerInputSchema,
   resetPasswordInputSchema,
+  workosAuthorizeInputSchema,
+  workosExchangeInputSchema,
 } from '@pjok/shared'
 import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { passwordResets, sessions, users } from '../db/schema'
 import type { users as usersTable } from '../db/schema'
+import { isWorkosConfigured } from '../env'
 import { randomToken, sha256Hex } from '../lib/base64'
 import { AppError } from '../lib/errors'
 import { ok, parseBody } from '../lib/http'
@@ -29,6 +34,19 @@ import type { AppBindings } from '../types'
 type UserRow = typeof usersTable.$inferSelect
 
 const RESET_TOKEN_TTL_SECONDS = 900
+const WORKOS_STATE_TTL_SECONDS = 600
+
+const workosUserSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  first_name: z.string().nullable().optional(),
+  last_name: z.string().nullable().optional(),
+})
+const workosAuthSchema = z.object({
+  user: workosUserSchema,
+  access_token: z.string().optional(),
+  refresh_token: z.string().optional(),
+})
 
 export const authRoutes = new Hono<AppBindings>()
 
@@ -48,6 +66,60 @@ authRoutes.post('/login', async (c) => {
   const valid = await verifyPassword(body.password, user.passwordHash)
   if (!valid) {
     throw new AppError(401, 'INVALID_CREDENTIALS', 'Email atau kata sandi salah')
+  }
+
+  const session = await createSession(db, user.id, c.req.header('user-agent'))
+  const access = await issueAccessToken(env, {
+    id: user.id,
+    role: user.role,
+    email: user.email,
+    name: user.name,
+  })
+
+  return ok(c, {
+    accessToken: access.token,
+    refreshToken: session.refreshToken,
+    expiresIn: access.expiresIn,
+    user: toPublicUser(user),
+  })
+})
+
+authRoutes.post('/register', async (c) => {
+  const env = c.get('env')
+  const db = c.get('db')
+  const body = await parseBody(c, registerInputSchema)
+  const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'local'
+  await checkRateLimit(env, 'register', clientIdentifier(ip, body.email), 5, 600)
+
+  const existing = await db.select().from(users).where(eq(users.email, body.email)).limit(1)
+  if (existing[0]) {
+    throw new AppError(
+      409,
+      'EMAIL_ALREADY_REGISTERED',
+      'Email sudah terdaftar. Silakan masuk atau gunakan email lain.',
+    )
+  }
+
+  const timestamp = nowIso()
+  const inserted = await db
+    .insert(users)
+    .values({
+      id: crypto.randomUUID(),
+      email: body.email,
+      passwordHash: await hashPassword(body.password),
+      name: body.name,
+      nip: null,
+      school: body.school ?? null,
+      role: 'teacher',
+      authProvider: 'password',
+      workosUserId: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    })
+    .returning()
+  const user = inserted[0]
+  if (!user) {
+    throw new AppError(500, 'INTERNAL_ERROR', 'Akun gagal dibuat')
   }
 
   const session = await createSession(db, user.id, c.req.header('user-agent'))
@@ -101,6 +173,151 @@ authRoutes.post('/logout', requireAuth, async (c) => {
     await revokeSessionByToken(db, parsed.data.refreshToken)
   }
   return c.body(null, 204)
+})
+
+authRoutes.get('/workos/status', (c) => {
+  const env = c.get('env')
+  const enabled = isWorkosConfigured(env)
+  return ok(c, {
+    enabled,
+    clientId: enabled ? env.WORKOS_CLIENT_ID : null,
+  })
+})
+
+authRoutes.post('/workos/authorize', async (c) => {
+  const env = c.get('env')
+  if (!isWorkosConfigured(env)) {
+    throw new AppError(
+      503,
+      'WORKOS_NOT_CONFIGURED',
+      'Login WorkOS belum dikonfigurasi pada server.',
+    )
+  }
+  const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for')
+  await checkRateLimit(env, 'workos-authorize', clientIdentifier(ip), 20, 600)
+  const body = await parseBody(c, workosAuthorizeInputSchema)
+  const state = randomToken(24)
+  await env.RATE_LIMIT.put(
+    `workos:state:${await sha256Hex(state)}`,
+    JSON.stringify({ redirectUri: body.redirectUri }),
+    { expirationTtl: WORKOS_STATE_TTL_SECONDS },
+  )
+
+  const authorizeUrl = new URL(`${env.WORKOS_API_BASE}/user_management/authorize`)
+  authorizeUrl.searchParams.set('client_id', env.WORKOS_CLIENT_ID ?? '')
+  authorizeUrl.searchParams.set('redirect_uri', body.redirectUri)
+  authorizeUrl.searchParams.set('response_type', 'code')
+  authorizeUrl.searchParams.set('provider', 'authkit')
+  authorizeUrl.searchParams.set('state', state)
+  if (env.WORKOS_CONNECTION_ID) {
+    authorizeUrl.searchParams.set('connection', env.WORKOS_CONNECTION_ID)
+  }
+
+  return ok(c, { url: authorizeUrl.toString(), state })
+})
+
+authRoutes.post('/workos/exchange', async (c) => {
+  const env = c.get('env')
+  const db = c.get('db')
+  if (!isWorkosConfigured(env)) {
+    throw new AppError(
+      503,
+      'WORKOS_NOT_CONFIGURED',
+      'Login WorkOS belum dikonfigurasi pada server.',
+    )
+  }
+  const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for')
+  await checkRateLimit(env, 'workos-exchange', clientIdentifier(ip), 20, 600)
+  const body = await parseBody(c, workosExchangeInputSchema)
+  const stateKey = `workos:state:${await sha256Hex(body.state)}`
+  const storedState = await env.RATE_LIMIT.get(stateKey)
+  if (!storedState) {
+    throw new AppError(
+      400,
+      'WORKOS_STATE_INVALID',
+      'Sesi login WorkOS tidak valid atau kedaluwarsa.',
+    )
+  }
+  await env.RATE_LIMIT.delete(stateKey)
+
+  let workosPayload: z.infer<typeof workosAuthSchema>
+  try {
+    const response = await fetch(`${env.WORKOS_API_BASE}/user_management/authenticate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: env.WORKOS_CLIENT_ID,
+        client_secret: env.WORKOS_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: body.code,
+      }),
+    })
+    if (!response.ok) {
+      throw new Error(`WorkOS menolak pertukaran kode (${response.status})`)
+    }
+    workosPayload = workosAuthSchema.parse(await response.json())
+  } catch {
+    throw new AppError(
+      502,
+      'WORKOS_EXCHANGE_FAILED',
+      'Login WorkOS gagal diproses. Silakan coba lagi.',
+    )
+  }
+
+  const email = workosPayload.user.email.trim().toLowerCase()
+  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1)
+  let user = rows[0]
+  const timestamp = nowIso()
+
+  if (!user) {
+    const fullName = [workosPayload.user.first_name, workosPayload.user.last_name]
+      .filter((part): part is string => Boolean(part?.trim()))
+      .join(' ')
+      .trim()
+    const inserted = await db
+      .insert(users)
+      .values({
+        id: crypto.randomUUID(),
+        email,
+        passwordHash: `workos$${randomToken(24)}`,
+        name: fullName || email.split('@')[0] || 'Guru',
+        nip: null,
+        school: null,
+        role: 'teacher',
+        authProvider: 'workos',
+        workosUserId: workosPayload.user.id,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
+      .returning()
+    user = inserted[0]
+  } else if (!user.workosUserId) {
+    const updated = await db
+      .update(users)
+      .set({ workosUserId: workosPayload.user.id, updatedAt: timestamp })
+      .where(eq(users.id, user.id))
+      .returning()
+    user = updated[0] ?? user
+  }
+
+  if (!user) {
+    throw new AppError(500, 'INTERNAL_ERROR', 'Akun WorkOS gagal disiapkan')
+  }
+
+  const session = await createSession(db, user.id, c.req.header('user-agent'))
+  const access = await issueAccessToken(env, {
+    id: user.id,
+    role: user.role,
+    email: user.email,
+    name: user.name,
+  })
+
+  return ok(c, {
+    accessToken: access.token,
+    refreshToken: session.refreshToken,
+    expiresIn: access.expiresIn,
+    user: toPublicUser(user),
+  })
 })
 
 authRoutes.get('/me', requireAuth, async (c) => {
@@ -221,6 +438,7 @@ function toPublicUser(row: UserRow): Teacher {
     nip: row.nip,
     school: row.school,
     role: row.role,
+    authProvider: row.authProvider,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

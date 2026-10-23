@@ -13,13 +13,14 @@ export async function createTeacher(options: {
   email: string
   name?: string
   password?: string
+  role?: 'teacher' | 'admin' | 'superadmin'
 }): Promise<TestTeacher> {
   const password = options.password ?? 'password123'
   const passwordHash = await hashPassword(password)
   const timestamp = new Date().toISOString()
   await env.DB.prepare(
-    `INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'teacher', ?, ?)`,
+    `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'password', NULL, ?, ?)`,
   )
     .bind(
       options.id,
@@ -28,6 +29,7 @@ export async function createTeacher(options: {
       options.name ?? 'Guru Uji',
       null,
       'Sekolah Uji',
+      options.role ?? 'teacher',
       timestamp,
       timestamp,
     )

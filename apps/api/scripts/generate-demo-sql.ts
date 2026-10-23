@@ -12,6 +12,7 @@ const outPath = resolve(here, '../src/db/seed/demo.sql')
 const instruments = JSON.parse(readFileSync(catalogPath, 'utf8')) as Instrument[]
 
 const teacherId = 'demo-teacher'
+const superadminId = 'demo-superadmin'
 const timestamp = '2026-10-01T08:00:00.000Z'
 
 type DemoClass = {
@@ -171,7 +172,7 @@ for (const [classIndex, demoClass] of demoClasses.entries()) {
 
 const lines: string[] = [
   '-- Seed demo (idempoten).',
-  '-- Cakupan: 3 kelas x 30 siswa, 4 grup materi, 3 asesmen final + 1 draf.',
+  '-- Cakupan: 1 superadmin, 1 guru, 3 kelas x 30 siswa, 4 grup materi, 3 asesmen final + 1 draf.',
   "DELETE FROM assessment_feedback WHERE result_id IN (SELECT r.id FROM assessment_results r JOIN assessments a ON a.id = r.assessment_id WHERE a.teacher_id = 'demo-teacher');",
   "DELETE FROM assessment_results WHERE assessment_id IN (SELECT id FROM assessments WHERE teacher_id = 'demo-teacher');",
   "DELETE FROM assessment_scores WHERE assessment_id IN (SELECT id FROM assessments WHERE teacher_id = 'demo-teacher');",
@@ -179,15 +180,27 @@ const lines: string[] = [
   "DELETE FROM students WHERE teacher_id = 'demo-teacher';",
   "DELETE FROM classes WHERE teacher_id = 'demo-teacher';",
   "DELETE FROM users WHERE id = 'demo-teacher';",
+  "DELETE FROM users WHERE id = 'demo-superadmin';",
 ]
 
 const passwordHash = await hashPassword('password123')
 lines.push(
-  `INSERT INTO users (id, email, password_hash, name, nip, school, role, created_at, updated_at) VALUES (${q(
+  `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES (${q(
     teacherId,
   )}, ${q('guru@demo.pjok.id')}, ${q(passwordHash)}, ${q('Budi Santoso')}, ${q(
     '198001012005011001',
-  )}, ${q('SMP Negeri 1 Demo')}, ${q('teacher')}, ${q(timestamp)}, ${q(timestamp)}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school;`,
+  )}, ${q('SMP Negeri 1 Demo')}, ${q('teacher')}, ${q('password')}, NULL, ${q(
+    timestamp,
+  )}, ${q(timestamp)}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, nip = excluded.nip, school = excluded.school, role = excluded.role;`,
+)
+lines.push(
+  `INSERT INTO users (id, email, password_hash, name, nip, school, role, auth_provider, workos_user_id, created_at, updated_at) VALUES (${q(
+    superadminId,
+  )}, ${q('superadmin@demo.pjok.id')}, ${q(passwordHash)}, ${q('Superadmin Demo')}, NULL, ${q(
+    'SMP Negeri 1 Demo',
+  )}, ${q('superadmin')}, ${q('password')}, NULL, ${q(timestamp)}, ${q(
+    timestamp,
+  )}) ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash, name = excluded.name, role = excluded.role;`,
 )
 
 for (const demoClass of demoClasses) {

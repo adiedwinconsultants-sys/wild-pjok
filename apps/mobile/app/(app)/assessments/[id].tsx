@@ -8,7 +8,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import {
   Badge,
   Button,
@@ -17,6 +17,7 @@ import {
   ErrorState,
   LoadingState,
   Screen,
+  SectionLabel,
   StatusBadge,
   TextField,
 } from '../../../src/components'
@@ -222,10 +223,27 @@ export default function AssessmentInputScreen() {
   }
 
   const selectedStudent = participants.find((item) => item.id === selectedStudentId)
+  const statusColor =
+    status === 'error'
+      ? colors.danger
+      : status === 'saved'
+        ? colors.highlight
+        : status === 'saving'
+          ? colors.accent
+          : 'rgba(250, 246, 234, 0.45)'
+  const statusText =
+    status === 'saving'
+      ? 'Menyimpan draf...'
+      : status === 'saved'
+        ? 'Draf tersimpan di server'
+        : status === 'error'
+          ? 'Gagal menyimpan draf'
+          : 'Perubahan tersimpan otomatis'
 
   return (
     <Screen>
-      <Card>
+      <Card variant="ink" style={styles.board}>
+        <SectionLabel tone="inverse">Lembar nilai</SectionLabel>
         <View style={styles.row}>
           <View style={styles.flex}>
             <Text style={styles.title}>{instrument.name}</Text>
@@ -235,15 +253,10 @@ export default function AssessmentInputScreen() {
           </View>
           <StatusBadge status={assessment.data.status} />
         </View>
-        <Text style={styles.saveStatus}>
-          {status === 'saving'
-            ? 'Menyimpan draf...'
-            : status === 'saved'
-              ? 'Draf tersimpan di server'
-              : status === 'error'
-                ? 'Gagal menyimpan draf'
-                : 'Perubahan tersimpan otomatis'}
-        </Text>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+          <Text style={styles.saveStatus}>{statusText}</Text>
+        </View>
         {!editable ? (
           <Button
             title="Lihat hasil"
@@ -253,7 +266,11 @@ export default function AssessmentInputScreen() {
         ) : null}
       </Card>
 
-      <View style={styles.studentTabs}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.studentTabs}
+      >
         {participants.map((student) => {
           const total = instrument.indicators.length
           const filled = filledFor(student.id)
@@ -267,7 +284,10 @@ export default function AssessmentInputScreen() {
               onPress={() => setSelectedStudentId(student.id)}
               style={[styles.studentTab, active && styles.studentTabActive]}
             >
-              <Text style={[styles.studentTabName, active && styles.studentTabNameActive]}>
+              <Text
+                style={[styles.studentTabName, active && styles.studentTabNameActive]}
+                numberOfLines={1}
+              >
                 {student.fullName}
               </Text>
               <Text style={[styles.studentTabProgress, active && styles.studentTabNameActive]}>
@@ -276,14 +296,17 @@ export default function AssessmentInputScreen() {
             </Pressable>
           )
         })}
-      </View>
+      </ScrollView>
 
       {selectedStudent ? (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{selectedStudent.fullName}</Text>
+            <View style={styles.flex}>
+              <SectionLabel>Indikator</SectionLabel>
+              <Text style={styles.sectionMeta}>{selectedStudent.fullName}</Text>
+            </View>
             <Badge
-              label={`${filledFor(selectedStudent.id)}/${instrument.indicators.length} indikator`}
+              label={`${filledFor(selectedStudent.id)}/${instrument.indicators.length} terisi`}
               tone={
                 filledFor(selectedStudent.id) === instrument.indicators.length
                   ? 'success'
@@ -293,13 +316,14 @@ export default function AssessmentInputScreen() {
           </View>
 
           <View style={styles.list}>
-            {instrument.indicators.map((indicator) => {
+            {instrument.indicators.map((indicator, index) => {
               const value = draft[scoreKey(selectedStudent.id, indicator.id)] ?? ''
               const missing = indicator.required && value.trim() === ''
               return (
                 <IndicatorField
                   key={indicator.id}
                   indicator={indicator}
+                  index={index + 1}
                   value={value}
                   missing={missing}
                   editable={editable}
@@ -309,8 +333,8 @@ export default function AssessmentInputScreen() {
             })}
           </View>
 
-          <Card style={styles.previewCard}>
-            <Text style={styles.sectionTitle}>Perkiraan nilai</Text>
+          <Card variant="ink" style={styles.previewCard}>
+            <SectionLabel tone="inverse">Perkiraan nilai</SectionLabel>
             {preview?.computed ? (
               <>
                 <View style={styles.previewRow}>
@@ -322,14 +346,14 @@ export default function AssessmentInputScreen() {
                     label={preview.computed.category.label}
                   />
                 </View>
-                <Text style={styles.meta}>
+                <Text style={styles.previewMeta}>
                   Nilai proses {formatScore(preview.computed.processScore)} · nilai produk{' '}
                   {formatScore(preview.computed.productScore)}. Angka final dihitung ulang server
                   saat finalisasi.
                 </Text>
               </>
             ) : (
-              <Text style={styles.meta}>
+              <Text style={styles.previewMeta}>
                 Lengkapi seluruh indikator wajib untuk melihat perkiraan nilai.
               </Text>
             )}
@@ -364,20 +388,23 @@ export default function AssessmentInputScreen() {
 
 function IndicatorField({
   indicator,
+  index,
   value,
   missing,
   editable,
   onChange,
 }: {
   indicator: Indicator
+  index: number
   value: string
   missing: boolean
   editable: boolean
   onChange: (value: string) => void
 }) {
   return (
-    <Card style={missing ? styles.missingCard : undefined}>
+    <Card rail={missing} style={missing ? styles.missingCard : undefined}>
       <View style={styles.row}>
+        <Text style={styles.indicatorIndex}>{String(index).padStart(2, '0')}</Text>
         <Text style={styles.indicatorName}>{indicator.name}</Text>
         <Badge label={indicator.kind === 'process' ? 'Proses' : 'Produk'} />
       </View>
@@ -398,40 +425,48 @@ function IndicatorField({
 }
 
 const styles = StyleSheet.create({
+  board: { gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1, gap: spacing.xs },
-  title: { ...typography.heading, color: colors.text },
+  title: { ...typography.heading, color: colors.textInverse },
   meta: { ...typography.small, color: colors.textMuted, lineHeight: 20 },
-  saveStatus: { ...typography.small, color: colors.textMuted },
-  studentTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  statusDot: { width: 7, height: 7 },
+  saveStatus: { ...typography.label, color: 'rgba(250, 246, 234, 0.62)' },
+  studentTabs: { gap: spacing.sm, marginTop: spacing.lg, paddingRight: spacing.lg },
   studentTab: {
+    minWidth: 132,
+    minHeight: 52,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    minHeight: 44,
     justifyContent: 'center',
+    gap: 2,
   },
   studentTabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  studentTabName: { ...typography.small, color: colors.text, fontWeight: '600' },
+  studentTabName: { ...typography.small, color: colors.text, maxWidth: 156 },
   studentTabNameActive: { color: colors.textInverse },
-  studentTabProgress: { ...typography.small, color: colors.textMuted },
+  studentTabProgress: { ...typography.label, color: colors.textMuted },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginTop: spacing.xl,
+    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
-  sectionTitle: { ...typography.heading, color: colors.text },
-  list: { gap: spacing.md, marginTop: spacing.md },
-  missingCard: { borderColor: colors.accent },
+  sectionMeta: { ...typography.small, color: colors.textMuted },
+  list: { gap: spacing.sm, marginTop: spacing.sm },
+  missingCard: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  indicatorIndex: { ...typography.monoStrong, color: colors.accent },
   indicatorName: { ...typography.subheading, color: colors.text, flex: 1 },
-  previewCard: { marginTop: spacing.lg },
+  previewCard: { marginTop: spacing.lg, gap: spacing.sm },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  previewScore: { ...typography.title, color: colors.primary },
+  previewScore: { ...typography.display, color: colors.highlight, fontSize: 62, lineHeight: 60 },
+  previewMeta: { ...typography.small, color: 'rgba(250, 246, 234, 0.68)' },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl },
   error: { ...typography.small, color: colors.danger, marginTop: spacing.md },
 })

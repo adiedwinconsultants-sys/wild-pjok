@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native'
 import { colors, radius, spacing, typography } from '../theme/tokens'
 
@@ -14,8 +15,12 @@ export function TextField({
   style,
   placeholder,
   accessibilityLabel,
+  onFocus,
+  onBlur,
+  multiline,
   ...rest
 }: TextFieldProps) {
+  const [focused, setFocused] = useState(false)
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -23,8 +28,24 @@ export function TextField({
         accessibilityLabel={accessibilityLabel ?? label ?? placeholder}
         accessibilityHint={error ? `Kesalahan: ${error}` : hint}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, error ? styles.inputError : null, style]}
+        placeholderTextColor={colors.textSubtle}
+        selectionColor={colors.primary}
+        multiline={multiline}
+        onFocus={(event) => {
+          setFocused(true)
+          onFocus?.(event)
+        }}
+        onBlur={(event) => {
+          setFocused(false)
+          onBlur?.(event)
+        }}
+        style={[
+          styles.input,
+          multiline && styles.inputMultiline,
+          focused && styles.inputFocused,
+          error ? styles.inputError : null,
+          style,
+        ]}
         {...rest}
       />
       {error ? (
@@ -38,20 +59,24 @@ export function TextField({
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.text },
+  wrapper: { gap: 6 },
+  label: { ...typography.label, color: colors.textMuted },
   input: {
     minHeight: 48,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    borderColor: 'transparent',
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     color: colors.text,
-    fontSize: 16,
+    fontFamily: typography.body.fontFamily,
+    fontSize: 17,
+    lineHeight: 22,
   },
-  inputError: { borderColor: colors.danger, backgroundColor: colors.dangerSoft },
-  error: { ...typography.small, color: colors.danger },
-  hint: { ...typography.small, color: colors.textMuted },
+  inputMultiline: { minHeight: 104, textAlignVertical: 'top' },
+  inputFocused: { backgroundColor: colors.surface, borderColor: colors.primary },
+  inputError: { borderColor: colors.danger },
+  error: { ...typography.small, fontSize: 13, color: colors.danger },
+  hint: { ...typography.small, fontSize: 13, color: colors.textMuted },
 })

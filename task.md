@@ -304,7 +304,28 @@ Legenda fase:
 - [x] **8.12** Review seluruh teks UI berbahasa Indonesia (tidak ada placeholder/Lorem/English bocor).
 - [ ] **8.13** BLOCKED: menunggu perangkat dan pembaca layar Uji aksesibilitas dengan TalkBack/VoiceOver pada alur input nilai.
 - [x] **8.14** Perbarui `README.md` dengan status rilis dan tautan dokumen.
-- [ ] **8.15** Tulis release notes v1.0.0 dan tag `v1.0.0` (hanya jika user meminta commit/tag).
+- [x] **8.15** Tulis release notes v1.0.0 dan tag `v1.0.0` (hanya jika user meminta commit/tag).
+- [x] **8.16** Redesign UI mobile ke arah profesional-minimalis ala Apple (tipografi sistem, palet netral, komponen inti, layar utama).
+  - [x] **8.16a** Token desain & komponen inti minimalis: warna netral, radius, tipografi sistem, Button/Card/TextField/Select/ListRow/Badge/PageHeader.
+  - [x] **8.16b** Splash, tab bar, header stack, dan layar autentikasi (login, daftar, lupa sandi, reset sandi).
+  - [x] **8.16c** Layar utama: Kelas, Asesmen, Riwayat, Profil, detail kelas, katalog, wizard, input nilai, hasil.
+  - [x] **8.16d** Verifikasi `typecheck`, `lint`, dan test mobile setelah redesign.
+
+## Fase 9 — WorkOS, registrasi pengguna, superadmin
+
+- [x] **9.1** Shared: role `superadmin`, schema `registerInputSchema`, `workosExchangeInputSchema`, `adminUserUpdateSchema`, tipe `AuthProvider` + `Teacher.authProvider`.
+- [x] **9.2** DB: migrasi baru `auth_provider` + `workos_user_id` pada `users` (tanpa mengubah migrasi lama), update schema Drizzle.
+- [x] **9.3** API auth: `POST /v1/auth/register` (akun guru), rate limit, email duplikat 409.
+- [x] **9.4** API WorkOS: `GET /v1/auth/workos/status`, `POST /v1/auth/workos/authorize` (state di KV), `POST /v1/auth/workos/exchange` (upsert akun + sesi lokal); env `WORKOS_*`; 503 bila belum dikonfigurasi.
+- [x] **9.5** API admin: `GET /v1/admin/users` (cari/filter/pagination) dan `PATCH /v1/admin/users/:id` (ubah role), hanya superadmin; cegah menurunkan superadmin terakhir.
+- [x] **9.6** Otorisasi: middleware/helper menganggap `admin` dan `superadmin` boleh mengakses lintas data; token/klaim memuat role baru.
+- [x] **9.7** Seed demo: satu akun superadmin (`superadmin@demo.pjok.id`) + guru demo; dokumentasikan kredensial lokal.
+- [x] **9.8** Test API: registrasi sukses/duplikat/validasi, guard admin, list/ubah role, WorkOS 503 saat belum dikonfigurasi.
+- [x] **9.9** Mobile auth: `signUp`, `signInWithWorkos` (expo-web-browser + deep link callback), status WorkOS, penyimpanan sesi.
+- [x] **9.10** Mobile layar daftar akun dan tombol WorkOS di login (disembunyikan bila belum dikonfigurasi).
+- [x] **9.11** Mobile layar "Kelola pengguna" untuk superadmin: daftar, pencarian, ubah role, status penyedia login.
+- [x] **9.12** Dokumentasi `docs/api.md` + `README.md` untuk registrasi, WorkOS env/dashboard redirect, dan akun superadmin.
+- [x] **9.13** Verifikasi akhir `pnpm typecheck`, `pnpm lint`, `pnpm test`.
 
 ---
 
@@ -322,8 +343,8 @@ Legenda fase:
 
 ## Di luar scope v1 (jangan dikerjakan tanpa instruksi)
 
-- Multi-sekolah / peran admin / akun orang tua.
-- Register mandiri (akun guru dibuat via seed/admin).
+- Multi-sekolah / akun orang tua. (Peran admin/superadmin dan registrasi mandiri kini masuk Fase 9 atas permintaan user.)
+- Registrasi mandiri tanpa WorkOS/persetujuan admin sudah dicakup Fase 9; verifikasi email tetap di luar scope.
 - Sinkronisasi offline dua arah dengan resolusi konflik kompleks.
 - Notifikasi push, integrasi LMS/Dapodik, analitik pihak ketiga.
 - Lokalisasi selain Bahasa Indonesia.
@@ -340,3 +361,5 @@ Legenda fase:
 - 2026-10-23 — Fase 5 selesai: kelas/siswa/impor, katalog, wizard, input skor/autosave, hasil/feedback/rekap/riwayat/reopen, ekspor, profil, test RTL.
 - 2026-10-23 — Fase 6 selesai: builder XLSX/PDF, route ekspor R2, cleanup 30 hari, test laporan.
 - 2026-10-23 - Fase 7 deploy: staging/production live, smoke test hijau, APK profile siap.
+- 2026-10-23 — Fase 8 redesign selesai: palet netral ala Apple, komponen inti, splash/tab/auth, layar utama + kelola pengguna; typecheck/lint/test hijau.
+- 2026-10-23 — Fase 9 selesai: registrasi guru, WorkOS backend-mediated, superadmin + kelola pengguna, migrasi 0001, seed demo, dokumentasi; typecheck/lint/test hijau.

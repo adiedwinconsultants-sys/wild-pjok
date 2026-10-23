@@ -1,5 +1,6 @@
 import type {
   AssessmentStatus,
+  AuthProvider,
   IsoDate,
   IsoDateTime,
   MaterialGroup,
@@ -16,8 +17,20 @@ export type Teacher = {
   nip: string | null
   school: string | null
   role: UserRole
+  authProvider: AuthProvider
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
+}
+
+export type AdminUser = Teacher & {
+  classCount: number
+}
+
+export type WorkosAuthResult = {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  user: Teacher
 }
 
 export type Class = {

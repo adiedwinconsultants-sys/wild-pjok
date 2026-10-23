@@ -1,3 +1,4 @@
+import type { ScoreCategory } from '@pjok/shared'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -10,7 +11,10 @@ import {
   ErrorState,
   LoadingState,
   OfflineNotice,
+  PageHeader,
   Screen,
+  SectionLabel,
+  Stat,
   TextField,
 } from '../../../src/components'
 import { useCreateExport } from '../../../src/features/assessments/hooks'
@@ -23,7 +27,7 @@ import {
 } from '../../../src/features/classes/hooks'
 import { errorMessage } from '../../../src/lib/api'
 import { downloadAndShareExport } from '../../../src/lib/export-file'
-import { formatScore } from '../../../src/lib/format'
+import { categoryLabel, formatDate, formatScore } from '../../../src/lib/format'
 import { offlineInfo } from '../../../src/lib/offline-cache'
 import { colors, spacing, typography } from '../../../src/theme/tokens'
 
@@ -121,53 +125,65 @@ export default function ClassDetailScreen() {
   }
 
   const klass = detail.data
-
   const offline = offlineInfo(detail.data, students.data, recap.data)
 
   return (
     <Screen>
       {offline ? <OfflineNotice cachedAt={offline.cachedAt} /> : null}
-      <Card>
-        <View style={styles.row}>
-          <View style={styles.flex}>
-            <Text style={styles.className}>{klass.name}</Text>
-            <Text style={styles.meta}>
-              Tingkat {klass.gradeLevel} · {klass.academicYear}
-            </Text>
-          </View>
-          <Badge label={`${klass.studentCount} siswa`} tone="info" />
-        </View>
-        {klass.notes ? <Text style={styles.notes}>{klass.notes}</Text> : null}
-        <View style={styles.actions}>
-          <Button
-            title="Ubah"
-            variant="secondary"
-            fullWidth={false}
-            onPress={() => router.push(`/class-form?id=${classId}`)}
-            style={styles.actionButton}
+
+      <PageHeader
+        eyebrow="Detail kelas"
+        title={klass.name}
+        subtitle={`Tingkat ${klass.gradeLevel} · Tahun ajaran ${klass.academicYear}`}
+      />
+
+      <View style={styles.headerActions}>
+        <Button
+          title="Ubah data"
+          variant="secondary"
+          fullWidth={false}
+          onPress={() => router.push(`/class-form?id=${classId}`)}
+          style={styles.headerAction}
+        />
+        <Button
+          title="Hapus kelas"
+          variant="ghost"
+          fullWidth={false}
+          onPress={onDeleteClass}
+          loading={deleteClass.isPending}
+        />
+      </View>
+      {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
+
+      <Card variant="ink" style={styles.summary}>
+        <SectionLabel tone="inverse">Ringkasan kelas</SectionLabel>
+        <View style={styles.summaryRow}>
+          <Stat value={String(klass.studentCount)} label="Peserta didik" tone="inverse" size="lg" />
+          <View style={styles.summaryDivider} />
+          <Stat
+            value={recap.data?.assessmentId ? formatScore(recap.data.average) : '—'}
+            label="Rata-rata terakhir"
+            tone="inverse"
+            size="lg"
           />
-          <Button
-            title="Hapus kelas"
-            variant="ghost"
-            fullWidth={false}
-            onPress={onDeleteClass}
-            loading={deleteClass.isPending}
-          />
         </View>
-        {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
+        {klass.notes ? <Text style={styles.summaryNote}>{klass.notes}</Text> : null}
       </Card>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Peserta didik</Text>
+        <View style={styles.flex}>
+          <SectionLabel>Peserta didik</SectionLabel>
+          <Text style={styles.sectionMeta}>{klass.studentCount} terdaftar</Text>
+        </View>
         <View style={styles.actions}>
           <Button
-            title="Impor"
+            title="Impor Excel"
             variant="secondary"
             fullWidth={false}
             onPress={() => router.push(`/import-students?classId=${classId}`)}
           />
           <Button
-            title="+ Siswa"
+            title="Tambah siswa"
             fullWidth={false}
             onPress={() => router.push(`/student-form?classId=${classId}`)}
           />
@@ -199,22 +215,24 @@ export default function ClassDetailScreen() {
       ) : null}
 
       <View style={styles.list}>
-        {filteredStudents.map((student) => (
+        {filteredStudents.map((student, index) => (
           <Card key={student.id} style={styles.studentCard}>
             <View style={styles.row}>
+              <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
               <View style={styles.flex}>
                 <Text style={styles.studentName}>{student.fullName}</Text>
                 <Text style={styles.meta}>
-                  NIS {student.nis} · {student.sex === 'L' ? 'Laki-laki' : 'Perempuan'} ·{' '}
-                  {student.birthDate}
+                  NIS {student.nis} · {student.sex === 'L' ? 'Laki-laki' : 'Perempuan'} · Lahir{' '}
+                  {formatDate(student.birthDate)}
                 </Text>
               </View>
             </View>
-            <View style={styles.actions}>
+            <View style={styles.studentActions}>
               <Button
                 title="Ubah"
                 variant="ghost"
                 fullWidth={false}
+                style={styles.smallAction}
                 onPress={() =>
                   router.push(`/student-form?classId=${classId}&studentId=${student.id}`)
                 }
@@ -223,6 +241,7 @@ export default function ClassDetailScreen() {
                 title="Hapus"
                 variant="ghost"
                 fullWidth={false}
+                style={styles.smallAction}
                 onPress={() => onDeleteStudent(student.id, student.fullName)}
               />
             </View>
@@ -231,7 +250,10 @@ export default function ClassDetailScreen() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Rekap terakhir</Text>
+        <View style={styles.flex}>
+          <SectionLabel>Rekap asesmen terakhir</SectionLabel>
+          <Text style={styles.sectionMeta}>Hasil final kelas ini</Text>
+        </View>
         {recap.data?.assessmentId ? (
           <View style={styles.actions}>
             <Button
@@ -265,38 +287,32 @@ export default function ClassDetailScreen() {
 
       {recap.data?.assessmentId ? (
         <Card>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{formatScore(recap.data.average)}</Text>
-              <Text style={styles.meta}>Rata-rata</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{formatScore(recap.data.min)}</Text>
-              <Text style={styles.meta}>Terendah</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{formatScore(recap.data.max)}</Text>
-              <Text style={styles.meta}>Tertinggi</Text>
-            </View>
+          <View style={styles.recapSummary}>
+            <Stat value={formatScore(recap.data.average)} label="Rata-rata" />
+            <Stat value={formatScore(recap.data.min)} label="Terendah" />
+            <Stat value={formatScore(recap.data.max)} label="Tertinggi" />
           </View>
           <View style={styles.distribution}>
-            {Object.entries(recap.data.distribution).map(([category, total]) => (
-              <Badge
-                key={category}
-                label={`${category.replace('_', ' ')}: ${total}`}
-                tone={category === 'perlu_bimbingan' ? 'danger' : 'neutral'}
-              />
-            ))}
+            {(Object.entries(recap.data.distribution) as [ScoreCategory, number][]).map(
+              ([category, total]) => (
+                <Badge
+                  key={category}
+                  label={`${categoryLabel(category)}: ${total}`}
+                  tone={category === 'perlu_bimbingan' ? 'danger' : 'neutral'}
+                />
+              ),
+            )}
           </View>
           <View style={styles.recapList}>
-            {sortedRecap.map((row) => (
+            {sortedRecap.map((row, index) => (
               <View key={row.studentId} style={styles.recapRow}>
+                <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
                 <View style={styles.flex}>
                   <Text style={styles.studentName}>{row.fullName}</Text>
                   <Text style={styles.meta}>NIS {row.nis}</Text>
                 </View>
                 <Text style={styles.score}>{formatScore(row.finalScore)}</Text>
-                <CategoryBadge category={row.category} label={row.category} />
+                <CategoryBadge category={row.category} label={categoryLabel(row.category)} />
               </View>
             ))}
           </View>
@@ -306,7 +322,7 @@ export default function ClassDetailScreen() {
             onPress={() => router.push(`/assessments/${recap.data?.assessmentId}/results`)}
             style={styles.linkButton}
           >
-            <Text style={styles.link}>Buka hasil lengkap</Text>
+            <Text style={styles.link}>Buka hasil lengkap →</Text>
           </Pressable>
         </Card>
       ) : null}
@@ -315,34 +331,38 @@ export default function ClassDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  flex: { flex: 1, gap: spacing.xs },
-  className: { ...typography.title, color: colors.text },
-  meta: { ...typography.small, color: colors.textMuted },
-  notes: { ...typography.small, color: colors.textMuted },
-  actions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' },
-  actionButton: { minWidth: 80 },
-  error: { ...typography.small, color: colors.danger },
+  headerActions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  headerAction: { flex: 1 },
+  error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
+  summary: { gap: spacing.md },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.lg },
+  summaryDivider: { width: 1, height: 54, backgroundColor: 'rgba(250, 246, 234, 0.25)' },
+  summaryNote: { ...typography.small, color: 'rgba(250, 246, 234, 0.68)' },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: spacing.md,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
     flexWrap: 'wrap',
   },
-  sectionTitle: { ...typography.heading, color: colors.text },
-  list: { gap: spacing.md, marginTop: spacing.md },
-  studentCard: { paddingVertical: spacing.md },
+  sectionMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  actions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' },
+  list: { gap: spacing.sm, marginTop: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  flex: { flex: 1, gap: spacing.xs },
+  index: { ...typography.monoStrong, color: colors.accent, width: 26 },
+  studentCard: { paddingVertical: spacing.md, gap: spacing.xs },
   studentName: { ...typography.subheading, color: colors.text },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
-  summaryItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
-  summaryValue: { ...typography.heading, color: colors.primary },
+  meta: { ...typography.small, color: colors.textMuted },
+  studentActions: { flexDirection: 'row', gap: spacing.sm, marginLeft: 38 },
+  smallAction: { minHeight: 40, paddingHorizontal: spacing.sm },
+  recapSummary: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   distribution: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   recapList: { gap: spacing.sm, marginTop: spacing.md },
   recapRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   score: { ...typography.subheading, color: colors.text },
   linkButton: { minHeight: 44, justifyContent: 'center' },
-  link: { ...typography.body, color: colors.primary },
+  link: { ...typography.label, color: colors.primary },
 })

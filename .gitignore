@@ -45,3 +45,5 @@ tmp/
 *.xlsx
 *.pdf
 !docs/**/*.pdf
+.env.local
+.env.local.bak

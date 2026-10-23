@@ -2,9 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, StyleSheet, Text, View } from 'react-native'
+import { Alert, StyleSheet, Text } from 'react-native'
 import { z } from 'zod'
-import { Button, Card, Screen, TextField } from '../../src/components'
+import { Button, Card, PageHeader, Screen, TextField } from '../../src/components'
 import { apiRequest, errorMessage } from '../../src/lib/api'
 import { colors, spacing, typography } from '../../src/theme/tokens'
 
@@ -50,11 +50,11 @@ export default function ResetPasswordScreen() {
 
   return (
     <Screen keyboard>
-      <View style={styles.header}>
-        <Text style={styles.title}>Kata sandi baru</Text>
-        <Text style={styles.subtitle}>Buat kata sandi baru minimal 8 karakter.</Text>
-      </View>
-      <Card>
+      <PageHeader
+        title="Kata sandi baru"
+        subtitle="Buat kata sandi baru minimal 8 karakter. Gunakan kombinasi yang tidak dipakai di layanan lain."
+      />
+      <Card style={styles.card}>
         {token ? (
           <>
             <Controller
@@ -103,8 +103,6 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { marginTop: spacing.xl, marginBottom: spacing.xl, gap: spacing.sm },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
+  card: { gap: spacing.md },
   error: { ...typography.small, color: colors.danger },
 })

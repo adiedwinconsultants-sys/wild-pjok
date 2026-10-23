@@ -41,9 +41,17 @@ Salin `database_id` dan KV `id` ke `wrangler.jsonc`.
 # minimal 32 byte acak, berbeda per lingkungan
 wrangler secret put JWT_SECRET --env staging
 wrangler secret put JWT_SECRET --env production
+
+# opsional — aktifkan login WorkOS
+wrangler secret put WORKOS_CLIENT_ID --env production
+wrangler secret put WORKOS_CLIENT_SECRET --env production
 ```
 
 Secret tidak pernah masuk repo. `.dev.vars` hanya untuk lokal dan sudah di-ignore.
+Tanpa `WORKOS_CLIENT_ID`/`WORKOS_CLIENT_SECRET`, registrasi dan login email/password tetap
+berjalan; endpoint WorkOS mengembalikan 503 dan tombol WorkOS disembunyikan di mobile.
+Daftarkan redirect URI yang sama dengan scheme aplikasi (mis. `pjok://auth/callback`) di
+dashboard WorkOS → Authentication → Redirects untuk setiap lingkungan.
 
 ### 3. Migrasi
 

@@ -7,7 +7,9 @@ import {
   ErrorState,
   LoadingState,
   OfflineNotice,
+  PageHeader,
   Screen,
+  SectionLabel,
 } from '../../../src/components'
 import { useInstrument } from '../../../src/features/instruments/hooks'
 import { errorMessage } from '../../../src/lib/api'
@@ -40,47 +42,55 @@ export default function InstrumentDetailScreen() {
   return (
     <Screen>
       {data.offline ? <OfflineNotice cachedAt={data.offline.cachedAt} /> : null}
-      <Card>
-        <Text style={styles.group}>{groupLabel(data.group)}</Text>
-        <Text style={styles.title}>{data.name}</Text>
-        <Text style={styles.description}>{data.description}</Text>
+
+      <PageHeader
+        eyebrow={groupLabel(data.group)}
+        title={data.name}
+        subtitle={`Versi ${data.version} · ${data.indicators.length} indikator penilaian`}
+      />
+
+      <Card variant="ink" style={styles.hero}>
+        <SectionLabel tone="inverse">Ringkasan instrumen</SectionLabel>
+        <Text style={styles.heroText}>{data.description}</Text>
         <View style={styles.badges}>
-          {data.assessesProcess ? <Badge label="Penilaian Proses" tone="info" /> : null}
-          {data.assessesProduct ? <Badge label="Penilaian Produk" tone="success" /> : null}
+          {data.assessesProcess ? <Badge label="Penilaian proses" tone="info" /> : null}
+          {data.assessesProduct ? <Badge label="Penilaian produk" tone="success" /> : null}
           <Badge label={`Versi ${data.version}`} />
         </View>
         <Button
           title="Mulai asesmen"
+          variant="accent"
           onPress={() => router.push(`/assessments/new?instrumentSlug=${data.slug}`)}
         />
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Tujuan</Text>
+        <SectionLabel>Tujuan</SectionLabel>
         <Text style={styles.body}>{data.purpose}</Text>
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Prosedur</Text>
+        <SectionLabel>Prosedur</SectionLabel>
         {data.procedure.map((step, index) => (
           <View key={`${index}-${step.slice(0, 12)}`} style={styles.step}>
-            <Text style={styles.stepNumber}>{index + 1}</Text>
+            <Text style={styles.stepNumber}>{String(index + 1).padStart(2, '0')}</Text>
             <Text style={styles.body}>{step}</Text>
           </View>
         ))}
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Indikator</Text>
-        {data.indicators.map((indicator) => (
+        <SectionLabel>Indikator</SectionLabel>
+        {data.indicators.map((indicator, index) => (
           <View key={indicator.id} style={styles.indicator}>
             <View style={styles.indicatorHeader}>
+              <Text style={styles.indicatorIndex}>{String(index + 1).padStart(2, '0')}</Text>
               <Text style={styles.indicatorName}>{indicator.name}</Text>
               <Badge label={indicator.kind === 'process' ? 'Proses' : 'Produk'} />
             </View>
             <Text style={styles.body}>{indicator.description}</Text>
             <Text style={styles.meta}>
-              Satuan: {indicator.unit} ·{' '}
+              Satuan {indicator.unit} ·{' '}
               {indicator.higherIsBetter
                 ? 'semakin besar semakin baik'
                 : 'semakin kecil semakin baik'}{' '}
@@ -90,7 +100,7 @@ export default function InstrumentDetailScreen() {
               <View style={styles.bands}>
                 {indicator.rubricBands.map((band) => (
                   <Text key={`${indicator.id}-${band.min}`} style={styles.band}>
-                    {band.min}-{band.max}: {band.label} ({band.points} poin)
+                    {band.min}–{band.max}: {band.label} ({band.points} poin)
                   </Text>
                 ))}
               </View>
@@ -105,16 +115,19 @@ export default function InstrumentDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Ambang kategori</Text>
+        <SectionLabel>Ambang kategori</SectionLabel>
         {data.categoryThresholds.map((threshold) => (
-          <Text key={`${threshold.category}-${threshold.minScore}`} style={styles.body}>
-            {threshold.label}: {threshold.minScore}-{threshold.maxScore}
-          </Text>
+          <View key={`${threshold.category}-${threshold.minScore}`} style={styles.threshold}>
+            <Text style={styles.thresholdLabel}>{threshold.label}</Text>
+            <Text style={styles.thresholdRange}>
+              {threshold.minScore}–{threshold.maxScore}
+            </Text>
+          </View>
         ))}
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Sumber</Text>
+        <SectionLabel>Sumber</SectionLabel>
         {data.sources.map((source) => (
           <View key={`${source.title}-${source.year ?? ''}`} style={styles.source}>
             <Text style={styles.sourceTitle}>{source.title}</Text>
@@ -139,27 +152,39 @@ export default function InstrumentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  group: { ...typography.label, color: colors.primary, letterSpacing: 1.2 },
-  title: { ...typography.title, color: colors.text },
-  description: { ...typography.body, color: colors.textMuted, lineHeight: 22 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.sm },
+  hero: { gap: spacing.md },
+  heroText: { ...typography.body, color: 'rgba(250, 246, 234, 0.74)' },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.xs },
   section: { marginTop: spacing.lg },
-  sectionTitle: { ...typography.heading, color: colors.text, marginBottom: spacing.xs },
-  body: { ...typography.body, color: colors.text, lineHeight: 22 },
+  body: { ...typography.body, color: colors.text },
   meta: { ...typography.small, color: colors.textMuted },
-  step: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
-  stepNumber: {
-    ...typography.subheading,
-    color: colors.primary,
-    width: 24,
-    textAlign: 'center',
+  step: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm },
+  stepNumber: { ...typography.monoStrong, color: colors.accent, width: 28 },
+  indicator: {
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  indicator: { gap: spacing.xs, marginBottom: spacing.md },
   indicatorHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  indicatorIndex: { ...typography.monoStrong, color: colors.accent },
   indicatorName: { ...typography.subheading, color: colors.text, flex: 1 },
   bands: { gap: 2, marginTop: spacing.xs },
   band: { ...typography.small, color: colors.textMuted },
-  source: { gap: 2, marginBottom: spacing.sm },
+  threshold: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: 3,
+  },
+  thresholdLabel: { ...typography.body, color: colors.text },
+  thresholdRange: { ...typography.mono, color: colors.textMuted },
+  source: {
+    gap: 2,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   sourceTitle: { ...typography.subheading, color: colors.text },
   sourceLink: { minHeight: 44, justifyContent: 'center' },
   link: { ...typography.small, color: colors.primary },

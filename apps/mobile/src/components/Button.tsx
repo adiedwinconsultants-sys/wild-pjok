@@ -1,4 +1,4 @@
-import {
+﻿import {
   ActivityIndicator,
   Pressable,
   type PressableProps,
@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { colors, radius, spacing, touchTarget, typography } from '../theme/tokens'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent'
 
 type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   title: string
@@ -48,7 +48,9 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           color={
-            variant === 'primary' || variant === 'danger' ? colors.textInverse : colors.primary
+            variant === 'primary' || variant === 'danger' || variant === 'accent'
+              ? colors.textInverse
+              : colors.primary
           }
         />
       ) : (
@@ -60,24 +62,31 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: touchTarget,
+    minHeight: 50,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
+    minWidth: touchTarget,
   },
   fullWidth: { alignSelf: 'stretch' },
   primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.primarySoft },
+  secondary: { backgroundColor: colors.surfaceMuted },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.danger },
-  pressed: { opacity: 0.85 },
-  disabled: { opacity: 0.5 },
-  label: { ...typography.subheading },
+  accent: { backgroundColor: colors.primary },
+  pressed: { opacity: 0.82 },
+  disabled: { opacity: 0.35 },
+  label: {
+    ...typography.subheading,
+    fontSize: 17,
+    lineHeight: 22,
+  },
   primaryLabel: { color: colors.textInverse },
-  secondaryLabel: { color: colors.primary },
+  secondaryLabel: { color: colors.text },
   ghostLabel: { color: colors.primary },
   dangerLabel: { color: colors.textInverse },
+  accentLabel: { color: colors.textInverse },
 })

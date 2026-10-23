@@ -21,6 +21,10 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   }
 })
 
+jest.mock('expo-font', () => ({
+  useFonts: () => [true, null],
+}))
+
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async () => null),
   setItemAsync: jest.fn(async () => undefined),

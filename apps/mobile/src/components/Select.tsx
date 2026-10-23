@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { colors, radius, spacing, typography } from '../theme/tokens'
+import { colors, radius, shadow, spacing, typography } from '../theme/tokens'
 
 export type SelectOption<T extends string> = { value: T; label: string }
 
@@ -53,22 +53,33 @@ export function Select<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  wrapper: { gap: spacing.sm },
-  label: { ...typography.label, color: colors.text },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  wrapper: { gap: 6 },
+  label: { ...typography.label, color: colors.textMuted },
+  options: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    padding: 4,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
   option: {
-    minHeight: 44,
+    minHeight: 36,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    alignItems: 'center',
+    borderRadius: 9,
   },
-  optionSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  optionPressed: { opacity: 0.8 },
+  optionSelected: { backgroundColor: colors.surface, ...shadow.floating },
+  optionPressed: { opacity: 0.7 },
   optionDisabled: { opacity: 0.5 },
-  optionText: { ...typography.body, color: colors.text },
-  optionTextSelected: { color: colors.textInverse, fontWeight: '600' },
-  error: { ...typography.small, color: colors.danger },
+  optionText: {
+    fontFamily: typography.subheading.fontFamily,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '500',
+    color: colors.textMuted,
+  },
+  optionTextSelected: { color: colors.text, fontWeight: '600' },
+  error: { ...typography.small, fontSize: 13, color: colors.danger },
 })

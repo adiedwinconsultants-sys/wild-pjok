@@ -1,14 +1,16 @@
 import type { MaterialGroup } from '@pjok/shared'
 import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import {
-  Card,
   EmptyState,
   ErrorState,
+  ListRow,
   LoadingState,
   OfflineNotice,
+  PageHeader,
   Screen,
+  SectionLabel,
   Select,
   TextField,
 } from '../../../src/components'
@@ -40,35 +42,37 @@ export default function CatalogScreen() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Text style={styles.title}>Katalog instrumen</Text>
-        <Text style={styles.subtitle}>
-          Setiap instrumen memiliki indikator, norma, dan sumber yang dapat Anda periksa.
-        </Text>
-      </View>
+      <PageHeader
+        title="Katalog"
+        subtitle="Indikator, norma, ambang kategori, dan sumber setiap instrumen."
+      />
 
       {instruments.data?.offline ? (
         <OfflineNotice cachedAt={instruments.data.offline.cachedAt} />
       ) : null}
 
-      <TextField
-        placeholder="Cari nama instrumen"
-        value={query}
-        onChangeText={setQuery}
-        autoCapitalize="none"
-      />
-      <Select<GroupFilter>
-        label="Kelompok materi"
-        value={group}
-        onChange={setGroup}
-        options={[
-          { value: 'all', label: 'Semua' },
-          { value: 'bola_besar', label: 'Bola Besar' },
-          { value: 'atletik', label: 'Atletik' },
-          { value: 'kebugaran_jasmani', label: 'Kebugaran' },
-          { value: 'tksi', label: 'TKSI' },
-        ]}
-      />
+      <View style={styles.filters}>
+        <TextField
+          placeholder="Cari nama instrumen"
+          value={query}
+          onChangeText={setQuery}
+          autoCapitalize="none"
+        />
+        <View style={styles.groupFilter}>
+          <SectionLabel>Kelompok materi</SectionLabel>
+          <Select<GroupFilter>
+            value={group}
+            onChange={setGroup}
+            options={[
+              { value: 'all', label: 'Semua' },
+              { value: 'bola_besar', label: 'Bola besar' },
+              { value: 'atletik', label: 'Atletik' },
+              { value: 'kebugaran_jasmani', label: 'Kebugaran' },
+              { value: 'tksi', label: 'TKSI' },
+            ]}
+          />
+        </View>
+      </View>
 
       {instruments.isLoading ? <LoadingState message="Memuat katalog..." /> : null}
       {instruments.isError ? (
@@ -86,21 +90,19 @@ export default function CatalogScreen() {
 
       {grouped.map(([groupKey, rows]) => (
         <View key={groupKey} style={styles.group}>
-          <Text style={styles.groupTitle}>{groupLabel(groupKey)}</Text>
+          <View style={styles.groupHeader}>
+            <SectionLabel>{groupLabel(groupKey)}</SectionLabel>
+            <Text style={styles.groupCount}>{rows.length} instrumen</Text>
+          </View>
           <View style={styles.list}>
             {rows.map((row) => (
-              <Pressable
+              <ListRow
                 key={row.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Buka instrumen ${row.name}`}
+                icon="document-text-outline"
+                title={row.name}
+                subtitle={`Versi ${row.version}`}
                 onPress={() => router.push(`/catalog/${row.slug}`)}
-                style={({ pressed }) => [pressed && styles.pressed]}
-              >
-                <Card>
-                  <Text style={styles.itemTitle}>{row.name}</Text>
-                  <Text style={styles.meta}>Versi {row.version}</Text>
-                </Card>
-              </Pressable>
+              />
             ))}
           </View>
         </View>
@@ -110,13 +112,15 @@ export default function CatalogScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: spacing.xs, marginBottom: spacing.lg },
-  title: { ...typography.title, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, lineHeight: 22 },
-  group: { marginTop: spacing.xl, gap: spacing.md },
-  groupTitle: { ...typography.heading, color: colors.text },
-  list: { gap: spacing.md },
-  itemTitle: { ...typography.subheading, color: colors.text },
-  meta: { ...typography.small, color: colors.textMuted },
-  pressed: { opacity: 0.85 },
+  filters: { gap: spacing.md, marginBottom: spacing.lg },
+  groupFilter: { gap: 6 },
+  group: { marginTop: spacing.lg, gap: spacing.sm },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  groupCount: { ...typography.label, color: colors.textMuted },
+  list: { gap: spacing.sm },
 })
