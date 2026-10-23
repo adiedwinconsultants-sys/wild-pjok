@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "ffac980a-72b2-421e-8a0d-c92ecd0c9816"
+      }
+    },
+    "android": {
+      "package": "com.adi.edwinconsultants.pjok"
+    }
+  }
+}

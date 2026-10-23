@@ -287,6 +287,7 @@ Legenda fase:
 - [ ] **7.14** BLOCKED: alert dashboard Cloudflare belum dikonfigurasi Observability: `wrangler tail`, alert error rate, log tanpa PII.
 - [ ] **7.15** BLOCKED: backup terjadwal menunggu kredensial Cloudflare Backup harian D1 ke R2 (scheduled worker/cron) + dokumentasi restore.
 - [x] **7.16** Review limit & biaya (D1 rows read/written, R2 storage, Worker CPU) dan catat di `docs/ops.md`.
+- [x] **7.17** Pin Node 22.19.0 + pnpm 12.6.0 di `eas.json` agar EAS Build tidak memakai pnpm bawaan 8.7.5 (gagal `engines.pnpm >=12`).
 
 ## Fase 8 — QA, dokumentasi, rilis
 

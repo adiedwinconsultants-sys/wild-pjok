@@ -3,7 +3,12 @@
     "version": ">= 16.0.0"
   },
   "build": {
+    "base": {
+      "node": "22.19.0",
+      "pnpm": "12.6.0"
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "env": {
@@ -11,6 +16,7 @@
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -20,11 +26,13 @@
       }
     },
     "production": {
+      "extends": "base",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wild-pjok.adi-edwinconsultants.workers.dev/v1"
       }
     },
     "production-apk": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
