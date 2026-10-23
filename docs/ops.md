@@ -6,9 +6,10 @@
 | --- | --- | --- | --- | --- |
 | lokal | default | `pjok` (local) | `pjok-exports` (local) | `RATE_LIMIT` (local) |
 | staging | `--env staging` | `pjok-staging` | `pjok-exports-staging` | namespace staging |
-| production | `--env production` | `pjok-production` | `pjok-exports-production` | namespace production |
+| production | top-level / `--env production` | `pjok-production` | `pjok-exports-production` | namespace production |
 
-`apps/api/wrangler.jsonc` memuat placeholder `database_id` dan KV `id`. Ganti dengan ID nyata sebelum deploy.
+`apps/api/wrangler.jsonc` sudah memuat `database_id` D1 dan KV `id` untuk kedua lingkungan.
+Worker production bernama `wild-pjok`; staging bernama `wild-pjok-staging`.
 
 ## Prasyarat deploy
 
@@ -68,7 +69,8 @@ Seed demo hanya untuk QA lokal, jangan ke production.
 # staging
 wrangler deploy --env staging
 # smoke test: health, login, CRUD kelas, finalisasi
-wrangler deploy --env production
+# production (top-level, dipakai integrasi Git)
+wrangler deploy
 ```
 
 Verifikasi CORS: set `CORS_ORIGIN` sesuai origin aplikasi; untuk mobile Bearer token tidak memerlukan credentials. Custom domain diatur di dashboard Cloudflare.

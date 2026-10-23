@@ -271,12 +271,12 @@ Legenda fase:
 
 ## Fase 7 — Deploy Cloudflare & build aplikasi
 
-- [ ] **7.1** BLOCKED: menunggu akun/kredensial Cloudflare Buat D1 database staging & production, catat `database_id` di `wrangler.jsonc`.
-- [ ] **7.2** BLOCKED: menunggu akun/kredensial Cloudflare Buat bucket R2 `pjok-exports` (staging & production).
-- [ ] **7.3** BLOCKED: menunggu akun/kredensial Cloudflare Buat KV namespace untuk rate limit & reset token (staging & production).
-- [ ] **7.4** BLOCKED: menunggu akun/kredensial Cloudflare Set secret `JWT_SECRET` (≥ 32 byte acak) per environment lewat `wrangler secret put`.
-- [ ] **7.5** BLOCKED: menunggu database remote Cloudflare Jalankan migrasi remote staging, lalu production; verifikasi tabel.
-- [ ] **7.6** BLOCKED: menunggu deploy staging Deploy worker staging, jalankan smoke test (health, login, CRUD kelas, finalisasi).
+- [x] **7.1** Buat D1 database staging & production, catat `database_id` di `wrangler.jsonc`.
+- [ ] **7.2** BLOCKED: R2 belum diaktifkan di dashboard Cloudflare; bucket staging/production belum bisa dibuat.
+- [x] **7.3** Buat KV namespace untuk rate limit & reset token (staging & production).
+- [x] **7.4** Set secret `JWT_SECRET` (≥ 32 byte acak) per environment lewat `wrangler secret put`.
+- [x] **7.5** Jalankan migrasi remote staging, lalu production; verifikasi tabel.
+- [ ] **7.6** BLOCKED: deploy staging gagal karena bucket R2 `pjok-exports-staging` belum ada (kode 10085).
 - [ ] **7.7** BLOCKED: menunggu smoke test staging Deploy production setelah smoke test staging hijau.
 - [ ] **7.8** BLOCKED: menunggu domain/CORS produksi Verifikasi custom domain/route API dan CORS dari build mobile.
 - [x] **7.9** Setup EAS project + `eas.json` profil `development`, `preview`, `production`.
