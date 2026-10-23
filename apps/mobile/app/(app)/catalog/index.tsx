@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  OfflineNotice,
   Screen,
   Select,
   TextField,
@@ -45,6 +46,10 @@ export default function CatalogScreen() {
           Setiap instrumen memiliki indikator, norma, dan sumber yang dapat Anda periksa.
         </Text>
       </View>
+
+      {instruments.data?.offline ? (
+        <OfflineNotice cachedAt={instruments.data.offline.cachedAt} />
+      ) : null}
 
       <TextField
         placeholder="Cari nama instrumen"
@@ -87,6 +92,7 @@ export default function CatalogScreen() {
               <Pressable
                 key={row.id}
                 accessibilityRole="button"
+                accessibilityLabel={`Buka instrumen ${row.name}`}
                 onPress={() => router.push(`/catalog/${row.slug}`)}
                 style={({ pressed }) => [pressed && styles.pressed]}
               >

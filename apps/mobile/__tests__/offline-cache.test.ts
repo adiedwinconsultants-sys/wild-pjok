@@ -1,0 +1,57 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { ApiError } from '../src/lib/api'
+import {
+  clearOfflineCache,
+  fetchWithOfflineCache,
+  readOfflineCache,
+} from '../src/lib/offline-cache'
+
+describe('offline cache', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear()
+  })
+
+  it('menyimpan hasil sukses dan memakainya saat jaringan gagal', async () => {
+    const online = await fetchWithOfflineCache('instruments', async () => ({
+      data: [{ id: 'i-1' }],
+    }))
+
+    expect(online.offline).toBeNull()
+    expect((await readOfflineCache('instruments'))?.data).toEqual({ data: [{ id: 'i-1' }] })
+
+    const offline = await fetchWithOfflineCache('instruments', async () => {
+      throw new ApiError(0, 'NETWORK_ERROR', 'Tidak dapat terhubung ke server.')
+    })
+
+    expect(offline.data).toEqual([{ id: 'i-1' }])
+    expect(offline.offline?.cachedAt).toBeTruthy()
+  })
+
+  it('meneruskan error non-jaringan tanpa memakai cache', async () => {
+    await fetchWithOfflineCache('recap:c-1', async () => ({ average: 80 }))
+
+    await expect(
+      fetchWithOfflineCache('recap:c-1', async () => {
+        throw new ApiError(403, 'FORBIDDEN', 'Tidak berhak.')
+      }),
+    ).rejects.toMatchObject({ status: 403 })
+  })
+
+  it('meneruskan error jaringan bila cache belum ada', async () => {
+    await expect(
+      fetchWithOfflineCache('recap:c-2', async () => {
+        throw new ApiError(0, 'NETWORK_ERROR', 'Tidak dapat terhubung ke server.')
+      }),
+    ).rejects.toMatchObject({ code: 'NETWORK_ERROR' })
+  })
+
+  it('membersihkan seluruh cache offline', async () => {
+    await fetchWithOfflineCache('instruments', async () => ({ data: [] }))
+    await fetchWithOfflineCache('recap:c-1', async () => ({ average: 80 }))
+
+    await clearOfflineCache()
+
+    expect(await readOfflineCache('instruments')).toBeNull()
+    expect(await readOfflineCache('recap:c-1')).toBeNull()
+  })
+})

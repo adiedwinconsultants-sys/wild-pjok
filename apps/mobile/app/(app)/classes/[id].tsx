@@ -9,6 +9,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  OfflineNotice,
   Screen,
   TextField,
 } from '../../../src/components'
@@ -23,6 +24,7 @@ import {
 import { errorMessage } from '../../../src/lib/api'
 import { downloadAndShareExport } from '../../../src/lib/export-file'
 import { formatScore } from '../../../src/lib/format'
+import { offlineInfo } from '../../../src/lib/offline-cache'
 import { colors, spacing, typography } from '../../../src/theme/tokens'
 
 export default function ClassDetailScreen() {
@@ -120,8 +122,11 @@ export default function ClassDetailScreen() {
 
   const klass = detail.data
 
+  const offline = offlineInfo(detail.data, students.data, recap.data)
+
   return (
     <Screen>
+      {offline ? <OfflineNotice cachedAt={offline.cachedAt} /> : null}
       <Card>
         <View style={styles.row}>
           <View style={styles.flex}>
@@ -297,7 +302,9 @@ export default function ClassDetailScreen() {
           </View>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Buka hasil lengkap asesmen terakhir"
             onPress={() => router.push(`/assessments/${recap.data?.assessmentId}/results`)}
+            style={styles.linkButton}
           >
             <Text style={styles.link}>Buka hasil lengkap</Text>
           </Pressable>
@@ -336,5 +343,6 @@ const styles = StyleSheet.create({
   recapList: { gap: spacing.sm, marginTop: spacing.md },
   recapRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   score: { ...typography.subheading, color: colors.text },
-  link: { ...typography.body, color: colors.primary, marginTop: spacing.md },
+  linkButton: { minHeight: 44, justifyContent: 'center' },
+  link: { ...typography.body, color: colors.primary },
 })

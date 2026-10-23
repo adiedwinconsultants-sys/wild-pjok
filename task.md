@@ -243,9 +243,9 @@ Legenda fase:
 - [x] **5.33** Layar ekspor: pilih format (Excel/PDF) → buat job → polling status → unduh.
 - [x] **5.34** Bagikan file hasil ekspor via `expo-sharing`/simpan ke perangkat.
 - [x] **5.35** Layar profil: nama, NIP, sekolah (dipakai di kop laporan), simpan ke API.
-- [ ] **5.36** Cache offline: katalog instrumen & rekap terakhir tetap terbaca tanpa jaringan.
+- [x] **5.36** Cache offline: katalog instrumen & rekap terakhir tetap terbaca tanpa jaringan.
 - [x] **5.37** Audit semua layar: loading, kosong, error + coba lagi, sukses.
-- [ ] **5.38** Audit aksesibilitas: label, urutan fokus, kontras, target sentuh ≥ 44×44.
+- [x] **5.38** Audit aksesibilitas: label, urutan fokus, kontras, target sentuh ≥ 44×44.
 - [x] **5.39** Test RTL: input skor menampilkan preview benar dan menangani error validasi.
 - [x] **5.40** Test RTL: wizard asesmen membuat draft dengan payload yang sesuai schema.
 
@@ -290,7 +290,7 @@ Legenda fase:
 
 ## Fase 8 — QA, dokumentasi, rilis
 
-- [ ] **8.1** Seed demo lengkap (3 kelas × 30 siswa, 4 grup materi, 3 asesmen final) untuk QA.
+- [x] **8.1** Seed demo lengkap (3 kelas × 30 siswa, 4 grup materi, 3 asesmen final) untuk QA.
 - [x] **8.2** Tulis `docs/api.md`: semua endpoint, skema request/response, kode error.
 - [x] **8.3** Tulis `docs/scoring.md`: rumus, norma, ambang, contoh perhitungan, sumber.
 - [x] **8.4** Tulis `docs/data-model.md`: ERD + penjelasan tabel & invariant.
@@ -298,7 +298,7 @@ Legenda fase:
 - [x] **8.6** Tulis `CONTEXT.md`: glosarium domain (asesmen, indikator, norma, proses/produk, TKSI).
 - [x] **8.7** Matriks penerimaan req 1–7: satu skenario uji per poin, catat status.
 - [ ] **8.8** BLOCKED: menunggu perangkat fisik Uji manual end-to-end di perangkat: login → kelas → impor → asesmen → finalisasi → feedback → rekap → ekspor.
-- [ ] **8.9** Benchmark API: p95 < 300 ms untuk list/rekap 100 siswa; optimalkan query bila lewat.
+- [x] **8.9** Benchmark API: p95 < 300 ms untuk list/rekap 100 siswa; optimalkan query bila lewat.
 - [x] **8.10** Security checklist: rate limit aktif, token kedaluwarsa, IDOR diuji, tidak ada secret di repo, dependency audit.
 - [x] **8.11** Audit PII: grep log/analytics untuk nama/NIS; pastikan tidak ada.
 - [x] **8.12** Review seluruh teks UI berbahasa Indonesia (tidak ada placeholder/Lorem/English bocor).

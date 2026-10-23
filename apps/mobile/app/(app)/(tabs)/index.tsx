@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  OfflineNotice,
   Screen,
   TextField,
 } from '../../../src/components'
@@ -45,6 +46,10 @@ export default function ClassesScreen() {
           style={styles.addButton}
         />
       </View>
+
+      {classes.data?.offline ? (
+        <OfflineNotice cachedAt={classes.data.offline.cachedAt} />
+      ) : null}
 
       <TextField
         placeholder="Cari kelas atau tahun ajaran"
@@ -126,6 +131,8 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    minHeight: 48,
     marginTop: spacing.xl,
     padding: spacing.md,
     borderRadius: radius.md,

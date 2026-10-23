@@ -1,6 +1,7 @@
 import type { LoginInput, ProfileUpdateInput, Teacher } from '@pjok/shared'
 import { create } from 'zustand'
 import { apiRequest, clearSession, getRefreshToken, hydrateTokens, persistSession } from './api'
+import { clearOfflineCache } from './offline-cache'
 import { queryClient } from './query-client'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -49,6 +50,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
     })
+    await clearOfflineCache()
     queryClient.clear()
     set({ status: 'authenticated', user: response.user })
   },
@@ -64,6 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Sesi lokal tetap dibersihkan meski server tidak dapat dihubungi.
     } finally {
       await clearSession()
+      await clearOfflineCache()
       queryClient.clear()
       set({ status: 'unauthenticated', user: null })
     }

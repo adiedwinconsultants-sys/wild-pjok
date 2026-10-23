@@ -73,6 +73,24 @@ wrangler deploy --env production
 
 Verifikasi CORS: set `CORS_ORIGIN` sesuai origin aplikasi; untuk mobile Bearer token tidak memerlukan credentials. Custom domain diatur di dashboard Cloudflare.
 
+### Deploy lewat integrasi Git Cloudflare Workers Builds
+
+Workers Builds menjalankan build dan deploy dari root repo. Karena Worker berada di
+`apps/api`, jangan biarkan perintah deploy default `npx wrangler deploy` berjalan di root
+(akan gagal dengan pesan "application detection logic ... root of a workspace"). Atur di
+dashboard Cloudflare → Worker → Settings → Build:
+
+| Pengaturan | Nilai |
+| --- | --- |
+| Build command | `pnpm install --frozen-lockfile` |
+| Deploy command | `cd apps/api && npx wrangler deploy` |
+
+Alternatif yang setara: gunakan workflow manual `.github/workflows/deploy-api.yml`
+(`workflow_dispatch`) yang sudah menetapkan `working-directory: apps/api`.
+
+Pastikan `database_id` D1 dan `id` KV di `apps/api/wrangler.jsonc` sudah berisi ID nyata
+sebelum deploy; placeholder nol akan ditolak Cloudflare.
+
 ## Rollback
 
 1. Deploy versi sebelumnya dari commit/tag yang diketahui baik:

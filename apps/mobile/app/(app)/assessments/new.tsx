@@ -119,6 +119,7 @@ export default function NewAssessmentScreen() {
               <Pressable
                 key={item.id}
                 accessibilityRole="radio"
+                accessibilityLabel={`Kelas ${item.name}, tingkat ${item.gradeLevel}, ${item.studentCount} siswa`}
                 accessibilityState={{ selected: classId === item.id }}
                 onPress={() => {
                   setClassId(item.id)
@@ -184,6 +185,7 @@ export default function NewAssessmentScreen() {
               <Pressable
                 key={item.id}
                 accessibilityRole="radio"
+                accessibilityLabel={`Instrumen ${item.name}, ${groupLabel(item.group)}`}
                 accessibilityState={{ selected: instrumentSlug === item.slug }}
                 onPress={() => setInstrumentSlug(item.slug)}
               >
@@ -245,6 +247,7 @@ export default function NewAssessmentScreen() {
                 <Pressable
                   key={student.id}
                   accessibilityRole="checkbox"
+                  accessibilityLabel={`${student.fullName}, NIS ${student.nis}`}
                   accessibilityState={{ checked }}
                   onPress={() => toggleStudent(student.id)}
                 >

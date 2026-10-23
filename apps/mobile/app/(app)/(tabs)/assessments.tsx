@@ -51,6 +51,7 @@ export default function AssessmentsScreen() {
           <Pressable
             key={item.id}
             accessibilityRole="button"
+            accessibilityLabel={`Lanjutkan draf ${item.instrumentName} kelas ${item.className}`}
             onPress={() => router.push(`/assessments/${item.id}`)}
             style={({ pressed }) => [pressed && styles.pressed]}
           >

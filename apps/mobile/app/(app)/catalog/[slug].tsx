@@ -1,6 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Badge, Button, Card, ErrorState, LoadingState, Screen } from '../../../src/components'
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorState,
+  LoadingState,
+  OfflineNotice,
+  Screen,
+} from '../../../src/components'
 import { useInstrument } from '../../../src/features/instruments/hooks'
 import { errorMessage } from '../../../src/lib/api'
 import { groupLabel } from '../../../src/lib/format'
@@ -31,6 +39,7 @@ export default function InstrumentDetailScreen() {
 
   return (
     <Screen>
+      {data.offline ? <OfflineNotice cachedAt={data.offline.cachedAt} /> : null}
       <Card>
         <Text style={styles.group}>{groupLabel(data.group)}</Text>
         <Text style={styles.title}>{data.name}</Text>
@@ -115,7 +124,9 @@ export default function InstrumentDetailScreen() {
             {source.url ? (
               <Pressable
                 accessibilityRole="link"
+                accessibilityLabel={`Buka sumber ${source.title}`}
                 onPress={() => void Linking.openURL(source.url ?? '')}
+                style={styles.sourceLink}
               >
                 <Text style={styles.link}>{source.url}</Text>
               </Pressable>
@@ -150,5 +161,6 @@ const styles = StyleSheet.create({
   band: { ...typography.small, color: colors.textMuted },
   source: { gap: 2, marginBottom: spacing.sm },
   sourceTitle: { ...typography.subheading, color: colors.text },
+  sourceLink: { minHeight: 44, justifyContent: 'center' },
   link: { ...typography.small, color: colors.primary },
 })

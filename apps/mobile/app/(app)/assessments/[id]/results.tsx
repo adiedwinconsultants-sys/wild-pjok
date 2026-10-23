@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import {
   Badge,
   Button,
@@ -259,20 +259,22 @@ function ResultCard({
       <Text style={styles.label}>Umpan balik</Text>
       <View style={styles.templates}>
         {TEMPLATES.map((template) => (
-          <Text
+          <Pressable
             key={template}
             accessibilityRole="button"
+            accessibilityLabel={`Gunakan template: ${template}`}
             onPress={() => {
               setNote(template)
               setSaved(false)
             }}
-            style={styles.template}
+            style={({ pressed }) => [styles.template, pressed && styles.templatePressed]}
           >
-            {template}
-          </Text>
+            <Text style={styles.templateText}>{template}</Text>
+          </Pressable>
         ))}
       </View>
       <TextField
+        accessibilityLabel="Umpan balik untuk siswa"
         placeholder="Tulis umpan balik untuk siswa"
         value={note}
         onChangeText={(value) => {
@@ -323,12 +325,15 @@ const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.text, marginTop: spacing.sm },
   templates: { gap: spacing.xs },
   template: {
-    ...typography.small,
-    color: colors.primary,
+    minHeight: 44,
+    justifyContent: 'center',
     backgroundColor: colors.primarySoft,
     borderRadius: radius.sm,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
+  templatePressed: { opacity: 0.8 },
+  templateText: { ...typography.small, color: colors.primary },
   reopen: { marginTop: spacing.xl },
   sectionTitle: { ...typography.heading, color: colors.text },
 })

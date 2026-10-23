@@ -10,6 +10,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Platform } from 'react-native'
 import { apiRequest, apiRequestPaginated } from '../../lib/api'
+import { fetchWithOfflineCache } from '../../lib/offline-cache'
 
 export type StudentImportResult = {
   dryRun: boolean
@@ -40,8 +41,10 @@ export function useClasses(query = '') {
   return useQuery({
     queryKey: ['classes', query],
     queryFn: () =>
-      apiRequestPaginated<ClassWithCount>(
-        `/classes?perPage=100${query ? `&q=${encodeURIComponent(query)}` : ''}`,
+      fetchWithOfflineCache(`classes:${query}`, () =>
+        apiRequestPaginated<ClassWithCount>(
+          `/classes?perPage=100${query ? `&q=${encodeURIComponent(query)}` : ''}`,
+        ),
       ),
   })
 }
@@ -49,7 +52,10 @@ export function useClasses(query = '') {
 export function useClass(classId: string) {
   return useQuery({
     queryKey: ['class', classId],
-    queryFn: () => apiRequest<ClassWithCount>(`/classes/${classId}`),
+    queryFn: () =>
+      fetchWithOfflineCache(`class:${classId}`, () =>
+        apiRequest<ClassWithCount>(`/classes/${classId}`),
+      ),
     enabled: Boolean(classId),
   })
 }
@@ -57,7 +63,10 @@ export function useClass(classId: string) {
 export function useClassStudents(classId: string) {
   return useQuery({
     queryKey: ['students', classId],
-    queryFn: () => apiRequestPaginated<Student>(`/classes/${classId}/students?perPage=100`),
+    queryFn: () =>
+      fetchWithOfflineCache(`students:${classId}`, () =>
+        apiRequestPaginated<Student>(`/classes/${classId}/students?perPage=100`),
+      ),
     enabled: Boolean(classId),
   })
 }
@@ -65,7 +74,10 @@ export function useClassStudents(classId: string) {
 export function useClassRecap(classId: string) {
   return useQuery({
     queryKey: ['recap', classId],
-    queryFn: () => apiRequest<ClassRecap>(`/classes/${classId}/recap`),
+    queryFn: () =>
+      fetchWithOfflineCache(`recap:${classId}`, () =>
+        apiRequest<ClassRecap>(`/classes/${classId}/recap`),
+      ),
     enabled: Boolean(classId),
   })
 }

@@ -71,6 +71,7 @@ export default function HistoryScreen() {
           <Pressable
             key={item.id}
             accessibilityRole="button"
+            accessibilityLabel={`${item.status === 'draft' ? 'Lanjutkan draf' : 'Buka hasil'} ${item.instrumentName} kelas ${item.className}`}
             onPress={() =>
               router.push(
                 item.status === 'draft'

@@ -44,7 +44,8 @@ pnpm --filter @pjok/api db:migrate:local
 pnpm --filter @pjok/api db:seed          # katalog + data demo
 ```
 
-Data demo: guru `guru@demo.pjok.id` / `password123`.
+Data demo: guru `guru@demo.pjok.id` / `password123`, 3 kelas × 30 siswa, 3 asesmen final
+(TKSI, bola besar, atletik), dan 1 draf kebugaran jasmani.
 
 ## Perintah
 

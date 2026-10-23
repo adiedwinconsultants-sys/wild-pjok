@@ -262,6 +262,7 @@ export default function AssessmentInputScreen() {
             <Pressable
               key={student.id}
               accessibilityRole="tab"
+              accessibilityLabel={`${student.fullName}, ${filled} dari ${total} indikator terisi`}
               accessibilityState={{ selected: active }}
               onPress={() => setSelectedStudentId(student.id)}
               style={[styles.studentTab, active && styles.studentTabActive]}

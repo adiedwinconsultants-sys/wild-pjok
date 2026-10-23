@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     textAlign: 'center',
-    paddingVertical: spacing.sm,
+    minHeight: 44,
+    paddingVertical: spacing.md,
   },
 })

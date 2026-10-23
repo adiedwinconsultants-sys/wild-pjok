@@ -7,17 +7,31 @@ type TextFieldProps = TextInputProps & {
   hint?: string
 }
 
-export function TextField({ label, error, hint, style, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  hint,
+  style,
+  placeholder,
+  accessibilityLabel,
+  ...rest
+}: TextFieldProps) {
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label ?? placeholder}
+        accessibilityHint={error ? `Kesalahan: ${error}` : hint}
+        placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         style={[styles.input, error ? styles.inputError : null, style]}
         {...rest}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
       {!error && hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   )
