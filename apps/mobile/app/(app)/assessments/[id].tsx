@@ -1,9 +1,4 @@
-import {
-  type RawScoreInput,
-  ScoringError,
-  type Sex,
-  computeAssessment,
-} from '@pjok/shared'
+import { type RawScoreInput, ScoringError, type Sex, computeAssessment } from '@pjok/shared'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -335,9 +330,7 @@ export default function AssessmentInputScreen() {
                   ]}
                 >
                   <View style={styles.row}>
-                    <Text
-                      style={[styles.indicatorIndex, missing && styles.indicatorIndexMissing]}
-                    >
+                    <Text style={[styles.indicatorIndex, missing && styles.indicatorIndexMissing]}>
                       {String(index + 1).padStart(2, '0')}
                     </Text>
                     <Text style={styles.indicatorName}>{indicator.name}</Text>

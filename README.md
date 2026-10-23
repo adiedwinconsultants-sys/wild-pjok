@@ -66,17 +66,26 @@ kebugaran jasmani. Halaman **Profil → Kelola pengguna** hanya tampil untuk adm
 ## Build APK Android
 
 Build memakai EAS cloud; tidak perlu Android SDK/JDK di mesin lokal.
+Jalankan EAS dari `apps/mobile`, tempat konfigurasi Expo dan `eas.json` aplikasi berada.
+Semua profil memakai Node 22.19.0 dan pnpm 12.6.0, sesuai `packageManager` di root.
 
 ```bash
 cd apps/mobile
 npx eas-cli@latest login          # sekali, akun Expo
-npx eas-cli@latest init           # sekali, menautkan projectId EAS
 npx eas-cli@latest build -p android --profile preview
 ```
 
 - `preview`: APK internal dengan API staging.
 - `production-apk`: APK internal dengan API production.
 - `production`: AAB untuk Play Store dengan API production.
+
+Build production dari direktori `apps/mobile`:
+
+```bash
+npx eas-cli@latest build -p android --profile production --clear-cache
+```
+
+Untuk APK yang dapat langsung dipasang, ganti profil menjadi `production-apk`.
 
 Setelah build selesai, unduh APK dari tautan EAS lalu pasang di perangkat
 (`adb install <file>.apk` atau buka tautannya langsung di Android).
@@ -102,5 +111,7 @@ docs            API, skoring, model data, operasi, penerimaan
 
 ## Status
 
-API staging dan production sudah ter-deploy di Cloudflare Workers. Build APK menunggu
-login akun EAS (lihat bagian Build APK Android).
+API staging dan production sudah ter-deploy di Cloudflare Workers. Build Android
+production (AAB) terverifikasi pada 2026-10-23:
+[hasil build EAS](https://expo.dev/accounts/adi.edwinconsultants/projects/pjok-asesmen/builds/cd6e88d9-5b9f-4de7-bb47-d97b1952c9b5).
+Rincian pemeriksaan dependency, test, dan build ada di [operasi & deploy](docs/ops.md#build-android-production).

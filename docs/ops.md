@@ -96,6 +96,38 @@ Alternatif yang setara: gunakan workflow manual `.github/workflows/deploy-api.ym
 Pastikan `database_id` D1 dan `id` KV di `apps/api/wrangler.jsonc` sudah berisi ID nyata
 sebelum deploy; placeholder nol akan ditolak Cloudflare.
 
+## Build Android production
+
+Konfigurasi aplikasi berada di `apps/mobile/app.json` dan `apps/mobile/eas.json`.
+EAS harus dijalankan dari `apps/mobile`; instalasi dependency tetap berlangsung di
+root workspace. Profil mewarisi Node 22.19.0 dan pnpm 12.6.0 dari profil `base`.
+
+```bash
+cd apps/mobile
+npx eas-cli@latest build -p android --profile production --clear-cache
+```
+
+- `production`: AAB bertanda tangan untuk Play Store, API production.
+- `production-apk`: APK internal yang dapat dipasang langsung, API production.
+- `preview`: APK internal, API staging.
+
+Verifikasi 2026-10-23:
+
+| Pemeriksaan | Hasil |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Lulus lokal dan EAS dengan pnpm 12.6.0 |
+| `pnpm peers check` | Tidak ada konflik peer dependency |
+| `expo install --check` / Expo Doctor | Versi sesuai SDK 58; 20/20 pemeriksaan lulus |
+| `pnpm typecheck` / `pnpm lint` | Lulus di seluruh workspace |
+| `pnpm test` | 60 test lulus: shared 25, API 23, mobile 12 |
+| `expo export --platform android` | Bundle Hermes production berhasil |
+| Wrangler production `deploy --dry-run` | Bundle Worker berhasil |
+| EAS production Android | `FINISHED`; native prebuild dan `:app:bundleRelease` berhasil |
+
+[Build EAS terverifikasi](https://expo.dev/accounts/adi.edwinconsultants/projects/pjok-asesmen/builds/cd6e88d9-5b9f-4de7-bb47-d97b1952c9b5)
+menghasilkan AAB untuk `id.pjok.asesmen`, versi aplikasi `0.1.0`, versionCode `1`.
+Uji alur aplikasi di perangkat tetap mengikuti task 7.11 dan 8.8.
+
 ## Rollback
 
 1. Deploy versi sebelumnya dari commit/tag yang diketahui baik:
