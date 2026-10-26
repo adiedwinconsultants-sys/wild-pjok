@@ -1,8 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query'
+import { NavigationBar } from 'expo-navigation-bar'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/lib/auth-store'
 import { queryClient } from '../src/lib/query-client'
@@ -19,6 +20,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
+        {Platform.OS === 'android' ? <NavigationBar hidden style="dark" /> : null}
         <StatusBar style="dark" />
         {status === 'loading' ? (
           <View style={styles.splash}>

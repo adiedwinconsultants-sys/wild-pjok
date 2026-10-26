@@ -17,7 +17,7 @@ import {
   Stat,
   TextField,
 } from '../../../src/components'
-import { useCreateExport } from '../../../src/features/assessments/hooks'
+import { ExportActions } from '../../../src/features/assessments/ExportActions'
 import {
   useClass,
   useClassRecap,
@@ -26,7 +26,6 @@ import {
   useDeleteStudent,
 } from '../../../src/features/classes/hooks'
 import { errorMessage } from '../../../src/lib/api'
-import { downloadAndShareExport } from '../../../src/lib/export-file'
 import { categoryLabel, formatDate, formatScore } from '../../../src/lib/format'
 import { offlineInfo } from '../../../src/lib/offline-cache'
 import { colors, spacing, typography } from '../../../src/theme/tokens'
@@ -39,7 +38,6 @@ export default function ClassDetailScreen() {
   const recap = useClassRecap(classId)
   const deleteClass = useDeleteClass()
   const deleteStudent = useDeleteStudent(classId)
-  const createExport = useCreateExport()
   const [search, setSearch] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -94,18 +92,6 @@ export default function ClassDetailScreen() {
         },
       },
     ])
-  }
-
-  const onExport = async (format: 'xlsx' | 'pdf') => {
-    const assessmentId = recap.data?.assessmentId
-    if (!assessmentId) return
-    setActionError(null)
-    try {
-      const job = await createExport.mutateAsync({ assessmentId, format })
-      await downloadAndShareExport(job)
-    } catch (error) {
-      setActionError(errorMessage(error))
-    }
   }
 
   if (detail.isLoading) {
@@ -254,24 +240,7 @@ export default function ClassDetailScreen() {
           <SectionLabel>Rekap asesmen terakhir</SectionLabel>
           <Text style={styles.sectionMeta}>Hasil final kelas ini</Text>
         </View>
-        {recap.data?.assessmentId ? (
-          <View style={styles.actions}>
-            <Button
-              title="Excel"
-              variant="secondary"
-              fullWidth={false}
-              loading={createExport.isPending}
-              onPress={() => void onExport('xlsx')}
-            />
-            <Button
-              title="PDF"
-              variant="secondary"
-              fullWidth={false}
-              loading={createExport.isPending}
-              onPress={() => void onExport('pdf')}
-            />
-          </View>
-        ) : null}
+        {recap.data?.assessmentId ? <ExportActions assessmentId={recap.data.assessmentId} /> : null}
       </View>
 
       {recap.isLoading ? <LoadingState message="Memuat rekap..." /> : null}

@@ -13,16 +13,15 @@ import {
   StatusBadge,
   TextField,
 } from '../../../../src/components'
+import { ExportActions } from '../../../../src/features/assessments/ExportActions'
 import {
   type ResultItem,
   useAssessment,
   useAssessmentResults,
-  useCreateExport,
   useReopenAssessment,
   useSaveFeedback,
 } from '../../../../src/features/assessments/hooks'
 import { errorMessage } from '../../../../src/lib/api'
-import { downloadAndShareExport } from '../../../../src/lib/export-file'
 import { formatDate, formatScore } from '../../../../src/lib/format'
 import { colors, radius, spacing, typography } from '../../../../src/theme/tokens'
 
@@ -37,7 +36,6 @@ export default function AssessmentResultsScreen() {
   const assessmentId = typeof params.id === 'string' ? params.id : ''
   const assessment = useAssessment(assessmentId)
   const results = useAssessmentResults(assessmentId)
-  const createExport = useCreateExport()
   const reopen = useReopenAssessment(assessmentId)
   const [actionError, setActionError] = useState<string | null>(null)
   const [showReopen, setShowReopen] = useState(false)
@@ -48,16 +46,6 @@ export default function AssessmentResultsScreen() {
     if (rows.length === 0) return null
     return rows.reduce((sum, row) => sum + row.finalScore, 0) / rows.length
   }, [results.data])
-
-  const onExport = async (format: 'xlsx' | 'pdf') => {
-    setActionError(null)
-    try {
-      const job = await createExport.mutateAsync({ assessmentId, format })
-      await downloadAndShareExport(job)
-    } catch (error) {
-      setActionError(errorMessage(error))
-    }
-  }
 
   const onReopen = async () => {
     setActionError(null)
@@ -129,24 +117,7 @@ export default function AssessmentResultsScreen() {
           </View>
           <Badge label="Nilai dihitung server" tone="info" />
         </View>
-        <View style={styles.actions}>
-          <Button
-            title="Excel"
-            variant="secondary"
-            fullWidth={false}
-            loading={createExport.isPending}
-            onPress={() => void onExport('xlsx')}
-            style={styles.flex}
-          />
-          <Button
-            title="PDF"
-            variant="secondary"
-            fullWidth={false}
-            loading={createExport.isPending}
-            onPress={() => void onExport('pdf')}
-            style={styles.flex}
-          />
-        </View>
+        <ExportActions assessmentId={assessmentId} />
         {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
       </Card>
 

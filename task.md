@@ -294,6 +294,8 @@ Legenda fase:
   - [x] **7.18b** Verifikasi bundle production, persiapan native, dan build Android EAS production; dokumentasikan hasil.
 - [x] **7.19** Build APK Android profil `production-apk` dengan API production; verifikasi status EAS dan tautan artefak APK.
 
+- [x] **7.20** Terapkan migrasi tertunda ke D1 production remote, lengkapi seed katalog yang belum ada tanpa menghapus data, dan verifikasi skema serta katalog.
+
 ## Fase 8 — QA, dokumentasi, rilis
 
 - [x] **8.1** Seed demo lengkap (3 kelas × 30 siswa, 4 grup materi, 3 asesmen final) untuk QA.
@@ -336,6 +338,10 @@ Legenda fase:
 - [x] **8.19** Permudah tanggal lahir siswa dengan date picker; verifikasi tambah/ubah, tanggal tidak valid, dan aksesibilitas.
 - [x] **8.20** Permudah input kelas dengan pilihan tingkat dan tahun ajaran; pertahankan data saat ubah dan verifikasi formulir.
 - [ ] **8.21** BLOCKED: menunggu rilis Expo CLI dengan perbaikan Zod 3 yang kompatibel. Ganti Zod 3.25.76 bawaan CLI dan verifikasi toolchain tanpa override major.
+
+- [x] **8.22** Perbaiki tab yang tertutup navigasi Android dengan safe area dinamis dan sembunyikan navigasi sistem saat aplikasi dibuka; verifikasi regresi dan bundle Android.
+
+- [x] **8.23** Ubah ekspor Android agar menyimpan Excel/PDF ke folder pilihan pengguna, pisahkan aksi berbagi, dan verifikasi pembatalan serta kegagalan simpan.
 
 ## Fase 9 — WorkOS, registrasi pengguna, superadmin
 

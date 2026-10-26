@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs } from 'expo-router'
 import type { ComponentProps } from 'react'
 import { type ColorValue, StyleSheet } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, fonts } from '../../../src/theme/tokens'
 
 type IconName = ComponentProps<typeof Ionicons>['name']
@@ -15,13 +16,15 @@ function tint(color: ColorValue | undefined): string {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets()
+  const bottomPadding = Math.max(insets.bottom, 12)
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSubtle,
-        tabBarStyle: styles.bar,
+        tabBarStyle: [styles.bar, { height: 70 + bottomPadding, paddingBottom: bottomPadding }],
         tabBarLabelStyle: styles.label,
         tabBarItemStyle: styles.item,
         sceneStyle: { backgroundColor: colors.background },
@@ -72,9 +75,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    height: 82,
     paddingTop: 8,
-    paddingBottom: 12,
     elevation: 0,
     shadowOpacity: 0,
   },

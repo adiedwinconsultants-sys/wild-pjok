@@ -5,8 +5,72 @@ import type { ExportJob } from '../features/assessments/hooks'
 import { ApiError, getAccessToken } from './api'
 import { env } from './env'
 
-export async function downloadAndShareExport(job: ExportJob): Promise<void> {
-  if (!job.downloadUrl) {
+export type ExportSaveResult = 'saved' | 'cancelled' | 'presented'
+
+export async function saveExport(job: ExportJob): Promise<ExportSaveResult> {
+  const metadata = exportMetadata(job)
+  if (Platform.OS !== 'android') {
+    await shareExport(job, 'Simpan laporan ke File')
+    return 'presented'
+  }
+  const permission =
+    await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync().catch(() => {
+      throw new ApiError(
+        500,
+        'EXPORT_FOLDER_PICKER_FAILED',
+        'Pemilih folder tidak dapat dibuka. Coba lagi.',
+      )
+    })
+  if (!permission.granted) return 'cancelled'
+  const target = `${FileSystem.cacheDirectory}${metadata.fileName}`
+  let destination: string | null = null
+  try {
+    const uri = await downloadToCache(metadata)
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+    destination = await FileSystem.StorageAccessFramework.createFileAsync(
+      permission.directoryUri,
+      metadata.fileName.slice(0, -(job.format.length + 1)),
+      metadata.mimeType,
+    )
+    await FileSystem.writeAsStringAsync(destination, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    })
+    return 'saved'
+  } catch (error) {
+    if (destination) await removeTemporaryFile(destination)
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      500,
+      'EXPORT_SAVE_FAILED',
+      'Berkas gagal disimpan. Periksa izin folder dan ruang penyimpanan, lalu coba lagi.',
+    )
+  } finally {
+    await removeTemporaryFile(target)
+  }
+}
+
+export async function shareExport(job: ExportJob, dialogTitle = 'Bagikan laporan'): Promise<void> {
+  const metadata = exportMetadata(job)
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new ApiError(
+      400,
+      'EXPORT_SHARING_UNAVAILABLE',
+      'Menu berbagi tidak tersedia pada perangkat ini.',
+    )
+  }
+  const target = `${FileSystem.cacheDirectory}${metadata.fileName}`
+  try {
+    const uri = await downloadToCache(metadata)
+    await Sharing.shareAsync(uri, { mimeType: metadata.mimeType, dialogTitle })
+  } finally {
+    await removeTemporaryFile(target)
+  }
+}
+
+function exportMetadata(job: ExportJob) {
+  if (job.status !== 'completed' || !job.downloadUrl) {
     throw new ApiError(409, 'EXPORT_NOT_READY', 'Berkas ekspor belum tersedia')
   }
   if (Platform.OS === 'web') {
@@ -16,26 +80,42 @@ export async function downloadAndShareExport(job: ExportJob): Promise<void> {
       'Unduhan berkas tersedia melalui aplikasi mobile.',
     )
   }
-
-  const token = getAccessToken()
-  const fileName = safeFileName(job)
-  const target = `${FileSystem.cacheDirectory ?? ''}${fileName}`
-  const downloadUrl = validatedDownloadUrl(job)
-  const result = await FileSystem.downloadAsync(downloadUrl, target, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (result.status !== 200) {
-    throw new ApiError(result.status, 'EXPORT_DOWNLOAD_FAILED', 'Gagal mengunduh berkas ekspor')
+  if (!FileSystem.cacheDirectory) {
+    throw new ApiError(
+      500,
+      'EXPORT_STORAGE_UNAVAILABLE',
+      'Penyimpanan sementara tidak tersedia. Mulai ulang aplikasi dan coba lagi.',
+    )
   }
+  const token = getAccessToken()
+  if (!token) throw new ApiError(401, 'UNAUTHORIZED', 'Sesi telah berakhir. Silakan masuk kembali.')
+  return {
+    fileName: safeFileName(job),
+    downloadUrl: validatedDownloadUrl(job),
+    mimeType:
+      job.format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/pdf',
+  }
+}
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(result.uri, {
-      mimeType:
-        job.format === 'xlsx'
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : 'application/pdf',
-      dialogTitle: 'Bagikan laporan',
-    })
+async function downloadToCache(metadata: ReturnType<typeof exportMetadata>): Promise<string> {
+  const token = getAccessToken()
+  if (!token) throw new ApiError(401, 'UNAUTHORIZED', 'Sesi telah berakhir. Silakan masuk kembali.')
+  const target = `${FileSystem.cacheDirectory}${metadata.fileName}`
+  const result = await FileSystem.downloadAsync(metadata.downloadUrl, target, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (result.status !== 200)
+    throw new ApiError(result.status, 'EXPORT_DOWNLOAD_FAILED', 'Gagal mengunduh berkas ekspor')
+  return result.uri
+}
+
+async function removeTemporaryFile(uri: string): Promise<void> {
+  try {
+    await FileSystem.deleteAsync(uri, { idempotent: true })
+  } catch {
+    // Kegagalan membersihkan salinan sementara tidak membatalkan penyimpanan yang sudah berhasil.
   }
 }
 
