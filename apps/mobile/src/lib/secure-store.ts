@@ -4,15 +4,19 @@ import { Platform } from 'react-native'
 
 const ACCESS_KEY = 'pjok.accessToken'
 const REFRESH_KEY = 'pjok.refreshToken'
+const webTokens = new Map<string, string>()
 
 async function read(key: string): Promise<string | null> {
-  if (Platform.OS === 'web') return AsyncStorage.getItem(key)
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key)
+    return webTokens.get(key) ?? null
+  }
   return SecureStore.getItemAsync(key)
 }
 
 async function write(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
-    await AsyncStorage.setItem(key, value)
+    webTokens.set(key, value)
     return
   }
   await SecureStore.setItemAsync(key, value)
@@ -20,6 +24,7 @@ async function write(key: string, value: string): Promise<void> {
 
 async function remove(key: string): Promise<void> {
   if (Platform.OS === 'web') {
+    webTokens.delete(key)
     await AsyncStorage.removeItem(key)
     return
   }

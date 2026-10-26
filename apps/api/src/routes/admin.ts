@@ -79,11 +79,22 @@ adminRoutes.patch('/users/:id', async (c) => {
   const updated = await db
     .update(users)
     .set({ role: body.role, updatedAt: nowIso() })
-    .where(eq(users.id, id))
+    .where(
+      and(
+        eq(users.id, id),
+        body.role === 'superadmin'
+          ? undefined
+          : sql`(${users.role} != 'superadmin' or (select count(*) from users where role = 'superadmin') > 1)`,
+      ),
+    )
     .returning()
   const row = updated[0]
   if (!row) {
-    throw new AppError(404, 'ADMIN_USER_NOT_FOUND', 'Pengguna tidak ditemukan')
+    throw new AppError(
+      409,
+      'LAST_SUPERADMIN',
+      'Superadmin terakhir tidak dapat diturunkan perannya',
+    )
   }
 
   const classRows = await db

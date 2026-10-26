@@ -7,6 +7,7 @@ import { AppError } from './errors'
 
 const claimsSchema = z.object({
   sub: z.string(),
+  sid: z.string().min(1),
   role: z.enum(['teacher', 'admin', 'superadmin']),
   email: z.string(),
   name: z.string(),
@@ -18,13 +19,14 @@ export type AccessClaims = z.infer<typeof claimsSchema>
 
 export async function issueAccessToken(
   env: Env,
-  user: { id: string; role: UserRole; email: string; name: string },
+  user: { id: string; sessionId: string; role: UserRole; email: string; name: string },
 ): Promise<{ token: string; expiresIn: number }> {
   const ttl = accessTokenTtl(env)
   const issuedAt = Math.floor(Date.now() / 1000)
   const token = await sign(
     {
       sub: user.id,
+      sid: user.sessionId,
       role: user.role,
       email: user.email,
       name: user.name,

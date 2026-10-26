@@ -5,11 +5,13 @@ import type { AppBindings } from '../types'
 
 export const contextMiddleware: MiddlewareHandler<AppBindings> = async (c, next) => {
   const env = parseEnv(c.env)
-  const requestId = c.req.header('x-request-id') ?? crypto.randomUUID()
+  const requestId = crypto.randomUUID()
   c.set('env', env)
   c.set('db', createDb(env))
   c.set('requestId', requestId)
   c.header('X-Request-Id', requestId)
+  c.header('Cache-Control', 'private, no-store')
+  c.header('X-Content-Type-Options', 'nosniff')
 
   const startedAt = Date.now()
   await next()
@@ -19,7 +21,7 @@ export const contextMiddleware: MiddlewareHandler<AppBindings> = async (c, next)
       level: 'info',
       requestId,
       method: c.req.method,
-      path: c.req.path,
+      path: c.req.routePath ?? 'unmatched',
       status: c.res.status,
       durationMs: Date.now() - startedAt,
       env: env.APP_ENV,

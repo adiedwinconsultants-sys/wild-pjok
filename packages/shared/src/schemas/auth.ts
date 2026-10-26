@@ -1,27 +1,27 @@
 import { z } from 'zod'
 
 export const loginInputSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Format email tidak valid'),
+  email: z.string().trim().toLowerCase().email('Format email tidak valid').max(254),
   password: z.string().min(8, 'Kata sandi minimal 8 karakter').max(200),
 })
 
 export const registerInputSchema = z.object({
   name: z.string().trim().min(2, 'Nama minimal 2 karakter').max(120),
-  email: z.string().trim().toLowerCase().email('Format email tidak valid'),
+  email: z.string().trim().toLowerCase().email('Format email tidak valid').max(254),
   password: z.string().min(8, 'Kata sandi minimal 8 karakter').max(200),
   school: z.string().trim().max(160).nullable().optional(),
 })
 
 export const refreshInputSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token wajib diisi'),
+  refreshToken: z.string().min(1, 'Refresh token wajib diisi').max(256),
 })
 
 export const forgotPasswordInputSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Format email tidak valid'),
+  email: z.string().trim().toLowerCase().email('Format email tidak valid').max(254),
 })
 
 export const resetPasswordInputSchema = z.object({
-  token: z.string().min(1, 'Token wajib diisi'),
+  token: z.string().min(1, 'Token wajib diisi').max(256),
   password: z.string().min(8, 'Kata sandi minimal 8 karakter').max(200),
 })
 

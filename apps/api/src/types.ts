@@ -4,6 +4,7 @@ import type { Env } from './env'
 
 export type AuthUser = {
   id: string
+  sessionId: string
   role: UserRole
   email: string
   name: string

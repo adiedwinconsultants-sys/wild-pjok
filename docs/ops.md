@@ -128,6 +128,11 @@ Verifikasi 2026-10-23:
 menghasilkan AAB untuk `id.pjok.asesmen`, versi aplikasi `0.1.0`, versionCode `1`.
 Uji alur aplikasi di perangkat tetap mengikuti task 7.11 dan 8.8.
 
+Build `production-apk` pada 2026-10-23 juga berstatus `FINISHED`:
+[hasil build APK](https://expo.dev/accounts/adi.edwinconsultants/projects/pjok-asesmen/builds/5b3932ce-22a3-4f71-bbf3-184ed8886e50),
+[unduh APK](https://expo.dev/artifacts/eas/ufnpALaeJxbqPipR7r5-PoaCG1xmIAqk9HS9gbuBSX4.apk)
+(sekitar 92 MB; tautan unduh terverifikasi HTTP 200).
+
 ## Rollback
 
 1. Deploy versi sebelumnya dari commit/tag yang diketahui baik:
@@ -187,3 +192,9 @@ Jadwalkan backup harian di CI/cron eksternal. Scheduled handler worker saat ini 
 | 403 pada resource sendiri | Cek `teacher_id` dan token user |
 | Ekspor gagal | Cek binding R2, ukuran data, lalu `wrangler tail` |
 | Migrasi gagal | Jangan edit migrasi lama; buat migrasi baru dan ulangi |
+
+Perubahan audit 8.18 memerlukan migrasi D1 `0003_assessment_mutation_guard.sql` sebelum Worker baru dijalankan. Migrasi menambahkan versi mutasi dan trigger integritas, tanpa mengubah nilai lama. Sesi dengan access token lama tanpa klaim `sid` perlu login ulang.
+
+Tanggal lahir memakai `@react-native-community/datetimepicker` 9.2.1, versi yang direkomendasikan Expo SDK 58 dan tersedia di Expo Go. Dependency native ditambahkan karena repo belum memiliki pemilih tanggal. Android memakai dialog sistem, iOS memakai spinner dengan konfirmasi, dan web memakai input tanggal browser. Konversi memakai komponen tanggal lokal agar tidak bergeser akibat UTC. Build aplikasi standalone baru diperlukan untuk memasukkan dependency native ini. [Dokumentasi Expo](https://docs.expo.dev/versions/latest/sdk/date-time-picker/).
+
+Verifikasi audit/form 2026-10-26: 114 tes lulus (shared 27, API 44, mobile 43), typecheck/lint bersih, frozen install dan `expo install --check` lulus, regresi patch node-forge lulus. Bundle Android/iOS/web dan Worker production dry-run lulus. Migrasi 0003 diterapkan pada D1 lokal dan generate ulang tidak menghasilkan perubahan skema. Tidak ada deployment atau build APK baru dalam perubahan ini; produksi memerlukan migrasi dan deployment, sedangkan instalasi Android memerlukan build native baru. Pratinjau web lokal dengan environment proses ditolak auto-review; interaksi form diverifikasi lewat tes komponen, tanpa mengklaim pengujian perangkat fisik.

@@ -4,6 +4,8 @@ import {
   clearOfflineCache,
   fetchWithOfflineCache,
   readOfflineCache,
+  setOfflineCacheOwner,
+  writeOfflineCache,
 } from '../src/lib/offline-cache'
 
 type InstrumentPayload = { data: Array<{ id: string }> }
@@ -11,6 +13,7 @@ type InstrumentPayload = { data: Array<{ id: string }> }
 describe('offline cache', () => {
   beforeEach(async () => {
     await AsyncStorage.clear()
+    setOfflineCacheOwner('teacher-a')
   })
 
   it('menyimpan hasil sukses dan memakainya saat jaringan gagal', async () => {
@@ -57,5 +60,27 @@ describe('offline cache', () => {
 
     expect(await readOfflineCache('instruments')).toBeNull()
     expect(await readOfflineCache('recap:c-1')).toBeNull()
+  })
+  it('isole cache dan draf antar akun serta menghapus draf lama saat keluar', async () => {
+    await writeOfflineCache('students:class-1', { data: [{ fullName: 'Data Uji' }] })
+    await writeOfflineCache('draft:assessment-1', { score: '80' })
+    await AsyncStorage.setItem('pjok.draft.legacy', '80')
+    setOfflineCacheOwner('teacher-b')
+    expect(await readOfflineCache('students:class-1')).toBeNull()
+    expect(await readOfflineCache('draft:assessment-1')).toBeNull()
+    await clearOfflineCache()
+    expect(await AsyncStorage.getAllKeys()).toEqual([])
+  })
+
+  it('respons terlambat setelah pergantian akun tidak mengisi cache akun baru', async () => {
+    let finish: ((value: { data: string[] }) => void) | undefined
+    const pending = new Promise<{ data: string[] }>((resolve) => {
+      finish = resolve
+    })
+    const request = fetchWithOfflineCache('students:class-1', () => pending)
+    setOfflineCacheOwner('teacher-b')
+    finish?.({ data: ['data-akun-lama'] })
+    await request
+    expect(await readOfflineCache('students:class-1')).toBeNull()
   })
 })

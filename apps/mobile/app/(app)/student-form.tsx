@@ -1,10 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type Sex, type StudentCreateInput, studentCreateSchema } from '@pjok/shared'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { StyleSheet, Text, View } from 'react-native'
-import { Button, Card, Screen, Select, TextField } from '../../src/components'
+import {
+  Button,
+  Card,
+  DateField,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+  Select,
+  TextField,
+} from '../../src/components'
 import {
   useClassStudents,
   useCreateStudent,
@@ -23,6 +33,7 @@ export default function StudentFormScreen() {
   const updateStudent = useUpdateStudent(classId)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const hydratedStudentId = useRef<string | null>(null)
   const existing = students.data?.data.find((item) => item.id === studentId)
 
   const {
@@ -36,7 +47,8 @@ export default function StudentFormScreen() {
   })
 
   useEffect(() => {
-    if (existing) {
+    if (existing && hydratedStudentId.current !== studentId) {
+      hydratedStudentId.current = studentId
       reset({
         fullName: existing.fullName,
         nis: existing.nis,
@@ -44,7 +56,7 @@ export default function StudentFormScreen() {
         birthDate: existing.birthDate,
       })
     }
-  }, [existing, reset])
+  }, [existing, reset, studentId])
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null)
@@ -59,6 +71,28 @@ export default function StudentFormScreen() {
       setServerError(errorMessage(error))
     }
   })
+
+  if (isEdit && students.isLoading)
+    return (
+      <Screen>
+        <LoadingState message="Memuat siswa..." />
+      </Screen>
+    )
+  if (isEdit && students.isError)
+    return (
+      <Screen>
+        <ErrorState message={errorMessage(students.error)} onRetry={() => students.refetch()} />
+      </Screen>
+    )
+  if (isEdit && !existing)
+    return (
+      <Screen>
+        <EmptyState
+          title="Siswa tidak ditemukan"
+          message="Kembali ke kelas dan pilih siswa yang masih terdaftar."
+        />
+      </Screen>
+    )
 
   return (
     <Screen keyboard>
@@ -114,14 +148,12 @@ export default function StudentFormScreen() {
           control={control}
           name="birthDate"
           render={({ field }) => (
-            <TextField
+            <DateField
               label="Tanggal lahir"
-              placeholder="YYYY-MM-DD"
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               onBlur={field.onBlur}
               error={errors.birthDate?.message}
-              hint="Contoh: 2012-01-31"
             />
           )}
         />

@@ -1,38 +1,34 @@
 import {
   assessmentInputSchema,
   assessmentListQuerySchema,
-  reopenInputSchema,
   scoreBatchInputSchema,
 } from '@pjok/shared'
-import {
-  SCORE_CATEGORY_LABELS,
-  ScoringError,
-  computeAssessment,
-  normalizeRawValue,
-} from '@pjok/shared'
-import type { IndicatorScore, Instrument, RawScoreInput, ScoreCategory } from '@pjok/shared'
+import { SCORE_CATEGORY_LABELS, ScoringError, normalizeRawValue } from '@pjok/shared'
+import type { IndicatorScore, ScoreCategory } from '@pjok/shared'
 import { and, count, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
-import type { Database } from '../db/client'
 import {
   assessmentResults,
   assessmentScores,
   assessments,
-  auditLogs,
   classes,
   instruments,
   students,
 } from '../db/schema'
 import {
+  loadAssessmentParticipants,
   parseInstrumentSnapshot,
   parseParticipantIds,
   requireOwnedAssessment,
 } from '../lib/assessment-helpers'
+import { buildPreview } from '../lib/assessment-scoring'
+import { mapAssessmentWriteError } from '../lib/assessment-write-error'
 import { AppError, conflict, notFound, validationError } from '../lib/errors'
 import { ok, paginationMeta, parseBody, parseParam, parseQuery } from '../lib/http'
 import { ageAt, nowIso } from '../lib/time'
 import { requireAuth } from '../middleware/auth'
 import type { AppBindings } from '../types'
+import { assessmentFinalizationRoutes } from './assessment-finalization'
 
 export const assessmentRoutes = new Hono<AppBindings>()
 assessmentRoutes.use('*', requireAuth)
@@ -171,7 +167,7 @@ assessmentRoutes.get('/:id', async (c) => {
   const assessment = await requireOwnedAssessment(db, user, id)
   const instrument = parseInstrumentSnapshot(assessment.instrumentSnapshotJson)
   const participantIds = parseParticipantIds(assessment.participantIdsJson)
-  const participants = await loadParticipants(db, participantIds)
+  const participants = await loadAssessmentParticipants(db, assessment)
   const scores = await db
     .select()
     .from(assessmentScores)
@@ -204,8 +200,7 @@ assessmentRoutes.put('/:id/scores', async (c) => {
 
   const body = await parseBody(c, scoreBatchInputSchema)
   const instrument = parseInstrumentSnapshot(assessment.instrumentSnapshotJson)
-  const participantIds = parseParticipantIds(assessment.participantIdsJson)
-  const participantRows = await loadParticipants(db, participantIds)
+  const participantRows = await loadAssessmentParticipants(db, assessment)
   const participantMap = new Map(participantRows.map((student) => [student.id, student]))
   const indicatorMap = new Map(instrument.indicators.map((indicator) => [indicator.id, indicator]))
 
@@ -219,7 +214,7 @@ assessmentRoutes.put('/:id/scores', async (c) => {
     }
     const indicator = indicatorMap.get(input.indicatorId)
     if (!indicator) {
-      throw validationError(`Indikator ${input.indicatorId} tidak ada pada instrumen ini`)
+      throw validationError('Indikator tidak ada pada instrumen ini')
     }
     const key = `${input.studentId}:${input.indicatorId}`
     if (seen.has(key)) {
@@ -271,204 +266,21 @@ assessmentRoutes.put('/:id/scores', async (c) => {
     )
   }
 
-  const [first, ...rest] = statements
-  if (first) {
-    await db.batch([first, ...rest])
-  }
-  await db.update(assessments).set({ updatedAt: timestamp }).where(eq(assessments.id, id))
+  await db
+    .batch([
+      db
+        .update(assessments)
+        .set({ updatedAt: timestamp, mutationVersion: crypto.randomUUID() })
+        .where(and(eq(assessments.id, id), sql`${assessments.status} != 'finalized'`)),
+      ...statements,
+    ])
+    .catch(mapAssessmentWriteError)
 
   const preview = await buildPreview(db, assessment, instrument)
   return ok(c, { updated: statements.length, preview })
 })
 
-assessmentRoutes.post('/:id/finalize', async (c) => {
-  const db = c.get('db')
-  const user = c.get('user')
-  const id = parseParam(c, 'id')
-  const assessment = await requireOwnedAssessment(db, user, id)
-  if (assessment.status === 'finalized') {
-    throw conflict('ASSESSMENT_FINALIZED', 'Asesmen sudah difinalisasi')
-  }
-
-  const instrument = parseInstrumentSnapshot(assessment.instrumentSnapshotJson)
-  const participants = await loadParticipants(
-    db,
-    parseParticipantIds(assessment.participantIdsJson),
-  )
-  const scores = await db
-    .select()
-    .from(assessmentScores)
-    .where(eq(assessmentScores.assessmentId, id))
-  const byStudent = groupScoresByStudent(scores)
-
-  const incomplete: Array<{ studentId: string; missing: string[] }> = []
-  for (const student of participants) {
-    const inputs = buildInputs(byStudent.get(student.id) ?? [], student, assessment.date)
-    const missing = instrument.indicators
-      .filter(
-        (indicator) =>
-          indicator.required && !inputs.some((input) => input.indicatorId === indicator.id),
-      )
-      .map((indicator) => indicator.id)
-    if (missing.length > 0) {
-      incomplete.push({ studentId: student.id, missing })
-    }
-  }
-  if (incomplete.length > 0) {
-    throw new AppError(422, 'INCOMPLETE_SCORES', 'Masih ada nilai indikator yang belum lengkap', {
-      students: incomplete,
-    })
-  }
-
-  const timestamp = nowIso()
-  const resultStatements = participants.map((student) => {
-    const inputs = buildInputs(byStudent.get(student.id) ?? [], student, assessment.date)
-    const computed = computeAssessment(instrument, inputs)
-    return db
-      .insert(assessmentResults)
-      .values({
-        id: crypto.randomUUID(),
-        assessmentId: id,
-        studentId: student.id,
-        processScore: computed.processScore,
-        productScore: computed.productScore,
-        finalScore: computed.finalScore,
-        category: computed.category.category,
-        computedAt: timestamp,
-      })
-      .onConflictDoUpdate({
-        target: [assessmentResults.assessmentId, assessmentResults.studentId],
-        set: {
-          processScore: computed.processScore,
-          productScore: computed.productScore,
-          finalScore: computed.finalScore,
-          category: computed.category.category,
-          computedAt: timestamp,
-        },
-      })
-  })
-
-  const [firstResult, ...restResults] = resultStatements
-  if (firstResult) {
-    await db.batch([firstResult, ...restResults])
-  }
-  await db
-    .update(assessments)
-    .set({ status: 'finalized', finalizedAt: timestamp, updatedAt: timestamp })
-    .where(eq(assessments.id, id))
-
-  const results = await db
-    .select()
-    .from(assessmentResults)
-    .where(eq(assessmentResults.assessmentId, id))
-  return ok(c, { status: 'finalized', finalizedAt: timestamp, results })
-})
-
-assessmentRoutes.post('/:id/reopen', async (c) => {
-  const db = c.get('db')
-  const user = c.get('user')
-  const id = parseParam(c, 'id')
-  const assessment = await requireOwnedAssessment(db, user, id)
-  if (assessment.status !== 'finalized') {
-    throw conflict('ASSESSMENT_NOT_FINALIZED', 'Hanya asesmen final yang dapat dibuka kembali')
-  }
-  const body = await parseBody(c, reopenInputSchema)
-  const timestamp = nowIso()
-  await db.batch([
-    db
-      .update(assessments)
-      .set({ status: 'reopened', reopenedAt: timestamp, updatedAt: timestamp })
-      .where(eq(assessments.id, id)),
-    db.insert(auditLogs).values({
-      id: crypto.randomUUID(),
-      actorId: user.id,
-      action: 'assessment.reopen',
-      entityType: 'assessment',
-      entityId: id,
-      payloadJson: JSON.stringify({ reason: body.reason }),
-      createdAt: timestamp,
-    }),
-  ])
-  return ok(c, { id, status: 'reopened', reopenedAt: timestamp })
-})
-
-async function loadParticipants(db: Database, participantIds: string[]) {
-  if (participantIds.length === 0) return []
-  return db
-    .select()
-    .from(students)
-    .where(inArray(students.id, participantIds))
-    .orderBy(students.fullName)
-}
-
-type ScoreRow = typeof assessmentScores.$inferSelect
-
-function groupScoresByStudent(rows: ScoreRow[]): Map<string, ScoreRow[]> {
-  const map = new Map<string, ScoreRow[]>()
-  for (const row of rows) {
-    const list = map.get(row.studentId) ?? []
-    list.push(row)
-    map.set(row.studentId, list)
-  }
-  return map
-}
-
-function buildInputs(
-  rows: ScoreRow[],
-  student: { id: string; sex: 'L' | 'P'; birthDate: string },
-  date: string,
-): RawScoreInput[] {
-  return rows.map((row) => ({
-    indicatorId: row.indicatorId,
-    rawValue: row.rawValue,
-    sex: student.sex,
-    age: ageAt(student.birthDate, date),
-  }))
-}
-
-async function buildPreview(
-  db: Database,
-  assessment: { id: string; date: string; participantIdsJson: string },
-  instrument: Instrument,
-) {
-  const participants = await loadParticipants(
-    db,
-    parseParticipantIds(assessment.participantIdsJson),
-  )
-  const scores = await db
-    .select()
-    .from(assessmentScores)
-    .where(eq(assessmentScores.assessmentId, assessment.id))
-  const byStudent = groupScoresByStudent(scores)
-  return participants.map((student) => {
-    const inputs = buildInputs(byStudent.get(student.id) ?? [], student, assessment.date)
-    try {
-      const computed = computeAssessment(instrument, inputs)
-      return {
-        studentId: student.id,
-        finalScore: computed.finalScore,
-        category: computed.category.category,
-        categoryLabel: computed.category.label,
-        processScore: computed.processScore,
-        productScore: computed.productScore,
-        complete: true,
-      }
-    } catch (error) {
-      if (error instanceof ScoringError) {
-        return {
-          studentId: student.id,
-          finalScore: null,
-          category: null,
-          categoryLabel: null,
-          processScore: null,
-          productScore: null,
-          complete: false,
-        }
-      }
-      throw error
-    }
-  })
-}
+assessmentRoutes.route('/', assessmentFinalizationRoutes)
 
 export function categoryLabel(category: ScoreCategory): string {
   return SCORE_CATEGORY_LABELS[category]

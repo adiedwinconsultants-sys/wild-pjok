@@ -1,44 +1,43 @@
 import type { Teacher } from '@pjok/shared'
 import {
-  forgotPasswordInputSchema,
   loginInputSchema,
   profileUpdateSchema,
   refreshInputSchema,
   registerInputSchema,
-  resetPasswordInputSchema,
 } from '@pjok/shared'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { passwordResets, sessions, users } from '../db/schema'
+import { sessions, users } from '../db/schema'
 import type { users as usersTable } from '../db/schema'
-import { randomToken, sha256Hex } from '../lib/base64'
+import { isUniqueViolation } from '../lib/db-utils'
 import { AppError } from '../lib/errors'
 import { ok, parseBody } from '../lib/http'
 import { hashPassword, verifyPassword } from '../lib/password'
 import { checkRateLimit, clientIdentifier } from '../lib/rate-limit'
-import {
-  createSession,
-  revokeAllSessions,
-  revokeSessionByToken,
-  rotateSession,
-} from '../lib/sessions'
-import { addSecondsIso, nowIso } from '../lib/time'
+import { createSession, revokeAllSessions, rotateSession } from '../lib/sessions'
+import { nowIso } from '../lib/time'
 import { issueAccessToken } from '../lib/tokens'
 import { requireAuth } from '../middleware/auth'
 import type { AppBindings } from '../types'
 
+import { passwordRecoveryRoutes } from './password-recovery'
+
 type UserRow = typeof usersTable.$inferSelect
 
-const RESET_TOKEN_TTL_SECONDS = 900
-
 export const authRoutes = new Hono<AppBindings>()
+
+authRoutes.use('*', async (c, next) => {
+  c.header('Cache-Control', 'private, no-store')
+  await next()
+})
 
 authRoutes.post('/login', async (c) => {
   const env = c.get('env')
   const db = c.get('db')
   const body = await parseBody(c, loginInputSchema)
   const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'local'
-  await checkRateLimit(env, 'login', clientIdentifier(ip, body.email), 10, 60)
+  await checkRateLimit(env, 'login-ip', clientIdentifier(ip), 100, 60)
+  await checkRateLimit(env, 'login', clientIdentifier(undefined, body.email), 10, 60)
 
   const rows = await db.select().from(users).where(eq(users.email, body.email)).limit(1)
   const user = rows[0]
@@ -54,6 +53,7 @@ authRoutes.post('/login', async (c) => {
   const session = await createSession(db, user.id, c.req.header('user-agent'))
   const access = await issueAccessToken(env, {
     id: user.id,
+    sessionId: session.sessionId,
     role: user.role,
     email: user.email,
     name: user.name,
@@ -72,7 +72,8 @@ authRoutes.post('/register', async (c) => {
   const db = c.get('db')
   const body = await parseBody(c, registerInputSchema)
   const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'local'
-  await checkRateLimit(env, 'register', clientIdentifier(ip, body.email), 5, 600)
+  await checkRateLimit(env, 'register-ip', clientIdentifier(ip), 20, 600)
+  await checkRateLimit(env, 'register', clientIdentifier(undefined, body.email), 5, 600)
 
   const existing = await db.select().from(users).where(eq(users.email, body.email)).limit(1)
   if (existing[0]) {
@@ -98,6 +99,15 @@ authRoutes.post('/register', async (c) => {
       updatedAt: timestamp,
     })
     .returning()
+    .catch((error: unknown) => {
+      if (isUniqueViolation(error))
+        throw new AppError(
+          409,
+          'EMAIL_ALREADY_REGISTERED',
+          'Email sudah terdaftar. Silakan masuk atau gunakan email lain.',
+        )
+      throw error
+    })
   const user = inserted[0]
   if (!user) {
     throw new AppError(500, 'INTERNAL_ERROR', 'Akun gagal dibuat')
@@ -106,6 +116,7 @@ authRoutes.post('/register', async (c) => {
   const session = await createSession(db, user.id, c.req.header('user-agent'))
   const access = await issueAccessToken(env, {
     id: user.id,
+    sessionId: session.sessionId,
     role: user.role,
     email: user.email,
     name: user.name,
@@ -133,6 +144,7 @@ authRoutes.post('/refresh', async (c) => {
 
   const access = await issueAccessToken(env, {
     id: user.id,
+    sessionId: rotated.sessionId,
     role: user.role,
     email: user.email,
     name: user.name,
@@ -148,11 +160,12 @@ authRoutes.post('/refresh', async (c) => {
 
 authRoutes.post('/logout', requireAuth, async (c) => {
   const db = c.get('db')
-  const raw = await c.req.json().catch(() => ({}))
-  const parsed = refreshInputSchema.safeParse(raw)
-  if (parsed.success) {
-    await revokeSessionByToken(db, parsed.data.refreshToken)
-  }
+  await parseBody(c, refreshInputSchema.partial())
+  const user = c.get('user')
+  await db
+    .update(sessions)
+    .set({ revokedAt: nowIso() })
+    .where(and(eq(sessions.id, user.sessionId), eq(sessions.userId, user.id)))
   return c.body(null, 204)
 })
 
@@ -167,80 +180,7 @@ authRoutes.get('/me', requireAuth, async (c) => {
   return ok(c, toPublicUser(row))
 })
 
-authRoutes.post('/forgot-password', async (c) => {
-  const env = c.get('env')
-  const db = c.get('db')
-  const body = await parseBody(c, forgotPasswordInputSchema)
-  const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'local'
-  await checkRateLimit(env, 'forgot-password', clientIdentifier(ip, body.email), 3, 900)
-
-  const rows = await db.select().from(users).where(eq(users.email, body.email)).limit(1)
-  const user = rows[0]
-
-  let devToken: string | undefined
-  if (user) {
-    const token = randomToken(32)
-    const tokenHash = await sha256Hex(token)
-    await db.insert(passwordResets).values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      tokenHash,
-      expiresAt: addSecondsIso(RESET_TOKEN_TTL_SECONDS),
-      usedAt: null,
-      createdAt: nowIso(),
-    })
-    await env.RATE_LIMIT.put(`reset:${tokenHash}`, user.id, {
-      expirationTtl: RESET_TOKEN_TTL_SECONDS,
-    })
-    if (env.APP_ENV === 'local') {
-      devToken = token
-    }
-  }
-
-  return c.json(
-    {
-      data: {
-        message: 'Jika email terdaftar, tautan pemulihan telah dibuat.',
-        ...(devToken ? { devToken } : {}),
-      },
-    },
-    202,
-  )
-})
-
-authRoutes.post('/reset-password', async (c) => {
-  const env = c.get('env')
-  const db = c.get('db')
-  const body = await parseBody(c, resetPasswordInputSchema)
-  const tokenHash = await sha256Hex(body.token)
-
-  const rows = await db
-    .select()
-    .from(passwordResets)
-    .where(eq(passwordResets.tokenHash, tokenHash))
-    .limit(1)
-  const reset = rows[0]
-  if (!reset || reset.usedAt !== null || new Date(reset.expiresAt).getTime() <= Date.now()) {
-    throw new AppError(400, 'INVALID_RESET_TOKEN', 'Token pemulihan tidak valid atau kedaluwarsa')
-  }
-
-  const kvUserId = await env.RATE_LIMIT.get(`reset:${tokenHash}`)
-  if (!kvUserId || kvUserId !== reset.userId) {
-    throw new AppError(400, 'INVALID_RESET_TOKEN', 'Token pemulihan tidak valid atau kedaluwarsa')
-  }
-
-  const passwordHash = await hashPassword(body.password)
-  const timestamp = nowIso()
-  await db
-    .update(users)
-    .set({ passwordHash, updatedAt: timestamp })
-    .where(eq(users.id, reset.userId))
-  await db.update(passwordResets).set({ usedAt: timestamp }).where(eq(passwordResets.id, reset.id))
-  await env.RATE_LIMIT.delete(`reset:${tokenHash}`)
-  await revokeAllSessions(db, reset.userId)
-
-  return ok(c, { message: 'Kata sandi berhasil diperbarui. Silakan masuk kembali.' })
-})
+authRoutes.route('/', passwordRecoveryRoutes)
 
 authRoutes.patch('/me', requireAuth, async (c) => {
   const db = c.get('db')
@@ -261,7 +201,6 @@ authRoutes.patch('/me', requireAuth, async (c) => {
 authRoutes.delete('/sessions', requireAuth, async (c) => {
   const user = c.get('user')
   const db = c.get('db')
-  await db.update(sessions).set({ revokedAt: nowIso() }).where(eq(sessions.userId, user.id))
   await revokeAllSessions(db, user.id)
   return c.body(null, 204)
 })

@@ -1,6 +1,7 @@
 import { SELF, env } from 'cloudflare:test'
 import { INSTRUMENTS } from '@pjok/shared'
 import { describe, expect, it } from 'vitest'
+import * as XLSX from 'xlsx'
 import { api, createTeacher, insertClass, insertInstrument, insertStudent, json } from './helpers'
 
 type CreatedAssessment = { data: { id: string } }
@@ -45,6 +46,12 @@ describe('asesmen', () => {
     expect(create.status).toBe(200)
     const created = await json<CreatedAssessment>(create)
     const assessmentId = created.data.id
+
+    const draftExport = await api('/exports', teacher.token, {
+      method: 'POST',
+      body: JSON.stringify({ assessmentId, format: 'pdf' }),
+    })
+    expect(draftExport.status).toBe(409)
 
     const score = await api(`/assessments/${assessmentId}/scores`, teacher.token, {
       method: 'PUT',
@@ -139,6 +146,13 @@ describe('asesmen', () => {
       classId: 'owned-class',
       nis: '9001',
     })
+    await insertStudent({
+      id: 'foreign-student',
+      teacherId: other.id,
+      classId: 'other-class',
+      nis: '9002',
+      fullName: 'Siswa Rahasia Lintas Guru',
+    })
     await insertInstrument(instrument, slug)
 
     const ids: string[] = []
@@ -185,21 +199,60 @@ describe('asesmen', () => {
     const forbiddenAssessment = await api(`/assessments/${ids[0]}`, other.token)
     expect(forbiddenAssessment.status).toBe(403)
 
+    const scores = await api(`/assessments/${ids[0]}/scores`, owner.token, {
+      method: 'PUT',
+      body: JSON.stringify({
+        scores: [{ studentId: 'owned-student', indicatorId: 'situp-60s', rawValue: 55 }],
+      }),
+    })
+    expect(scores.status).toBe(200)
+    const finalized = await api(`/assessments/${ids[0]}/finalize`, owner.token, {
+      method: 'POST',
+    })
+    expect(finalized.status).toBe(200)
+    await env.DB.prepare('UPDATE assessments SET participant_ids_json = ? WHERE id = ?')
+      .bind(JSON.stringify(['owned-student', 'foreign-student']), ids[0])
+      .run()
+
     const exportResponse = await SELF.fetch('http://example.com/v1/exports', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${owner.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ assessmentId: ids[0], format: 'pdf' }),
+      body: JSON.stringify({ assessmentId: ids[0], format: 'xlsx' }),
     })
     expect(exportResponse.status).toBe(200)
     const exportPayload = await json<{ data: { id: string } }>(exportResponse)
+
+    const ownerDownload = await api(`/exports/${exportPayload.data.id}/download`, owner.token)
+    expect(ownerDownload.status).toBe(200)
+    expect(ownerDownload.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(ownerDownload.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const workbook = XLSX.read(new Uint8Array(await ownerDownload.arrayBuffer()), { type: 'array' })
+    const reportSheet = workbook.Sheets.Rekap
+    expect(reportSheet).toBeTruthy()
+    if (!reportSheet) throw new Error('sheet Rekap kosong')
+    const reportRows = XLSX.utils.sheet_to_json<Array<string | number>>(reportSheet, { header: 1 })
+    expect(JSON.stringify(reportRows)).not.toContain('Siswa Rahasia Lintas Guru')
 
     const otherGet = await api(`/exports/${exportPayload.data.id}`, other.token)
     expect(otherGet.status).toBe(403)
     const otherDownload = await api(`/exports/${exportPayload.data.id}/download`, other.token)
     expect(otherDownload.status).toBe(403)
+
+    for (let index = 0; index < 4; index += 1) {
+      const repeatedExport = await api('/exports', owner.token, {
+        method: 'POST',
+        body: JSON.stringify({ assessmentId: ids[0], format: 'xlsx' }),
+      })
+      expect(repeatedExport.status).toBe(200)
+    }
+    const rateLimitedExport = await api('/exports', owner.token, {
+      method: 'POST',
+      body: JSON.stringify({ assessmentId: ids[0], format: 'xlsx' }),
+    })
+    expect(rateLimitedExport.status).toBe(429)
   })
 
   it('menyimpan umpan balik hanya setelah final', async () => {

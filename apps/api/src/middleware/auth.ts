@@ -1,5 +1,7 @@
 import { type UserRole, isAdminRole } from '@pjok/shared'
+import { and, eq, gt, isNull } from 'drizzle-orm'
 import type { MiddlewareHandler } from 'hono'
+import { sessions, users } from '../db/schema'
 import { AppError, forbidden, unauthorized } from '../lib/errors'
 import { verifyAccessToken } from '../lib/tokens'
 import type { AppBindings, AuthUser } from '../types'
@@ -14,11 +16,24 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
     throw unauthorized('Token akses kosong')
   }
   const claims = await verifyAccessToken(c.get('env'), token)
+  const [account] = await c
+    .get('db')
+    .select({ id: users.id, role: users.role, email: users.email, name: users.name })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.userId))
+    .where(
+      and(
+        eq(sessions.id, claims.sid),
+        eq(users.id, claims.sub),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, new Date().toISOString()),
+      ),
+    )
+    .limit(1)
+  if (!account) throw unauthorized('Sesi telah berakhir. Silakan masuk kembali.')
   const user: AuthUser = {
-    id: claims.sub,
-    role: claims.role,
-    email: claims.email,
-    name: claims.name,
+    ...account,
+    sessionId: claims.sid,
   }
   c.set('user', user)
   await next()

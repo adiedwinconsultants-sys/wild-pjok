@@ -21,11 +21,16 @@ export const classWithCountSchema = classResponseSchema.extend({
   studentCount: z.number().int().min(0),
 })
 
+const birthDateSchema = isoDateSchema.refine(
+  (value) => value <= new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  'Tanggal lahir tidak boleh melebihi hari ini',
+)
+
 export const studentCreateSchema = z.object({
   fullName: z.string().trim().min(1, 'Nama siswa wajib diisi').max(120),
   nis: z.string().trim().min(1, 'NIS wajib diisi').max(40),
   sex: sexSchema,
-  birthDate: isoDateSchema,
+  birthDate: birthDateSchema,
 })
 
 export const studentUpdateSchema = studentCreateSchema.partial()
@@ -47,7 +52,7 @@ export const studentImportRowSchema = z.object({
   fullName: z.string().trim().min(1, 'Nama wajib diisi'),
   nis: z.string().trim().min(1, 'NIS wajib diisi'),
   sex: sexSchema,
-  birthDate: isoDateSchema,
+  birthDate: birthDateSchema,
 })
 
 export const studentImportSummarySchema = z.object({

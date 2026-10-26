@@ -22,6 +22,7 @@ export class ApiError extends Error {
 let accessToken: string | null = null
 let refreshToken: string | null = null
 let refreshInFlight: Promise<boolean> | null = null
+let sessionVersion = 0
 
 export function getAccessToken(): string | null {
   return accessToken
@@ -33,6 +34,7 @@ export function getRefreshToken(): string | null {
 
 export async function hydrateTokens(): Promise<boolean> {
   const tokens = await tokenStore.load()
+  sessionVersion += 1
   accessToken = tokens.accessToken
   refreshToken = tokens.refreshToken
   return Boolean(accessToken && refreshToken)
@@ -42,12 +44,14 @@ export async function persistSession(tokens: {
   accessToken: string
   refreshToken: string
 }): Promise<void> {
+  sessionVersion += 1
   accessToken = tokens.accessToken
   refreshToken = tokens.refreshToken
   await tokenStore.save(tokens)
 }
 
 export async function clearSession(): Promise<void> {
+  sessionVersion += 1
   accessToken = null
   refreshToken = null
   await tokenStore.clear()
@@ -55,23 +59,32 @@ export async function clearSession(): Promise<void> {
 
 async function performRefresh(): Promise<boolean> {
   if (!refreshToken) return false
+  const version = sessionVersion
+  const token = refreshToken
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 20000)
   try {
     const response = await fetch(`${env.apiUrl}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify({ refreshToken: token }),
+      signal: controller.signal,
     })
+    if (version !== sessionVersion) return false
     if (!response.ok) {
-      await clearSession()
+      if (response.status === 401) await clearSession()
       return false
     }
     const payload = (await response.json()) as {
       data: { accessToken: string; refreshToken: string }
     }
+    if (version !== sessionVersion) return false
     await persistSession(payload.data)
     return true
   } catch {
     return false
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -154,6 +167,7 @@ export type Paginated<T> = {
 export async function apiRequestPaginated<T>(
   path: string,
   init: RequestInit = {},
+  allowRefresh = true,
 ): Promise<Paginated<T>> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 20000)
@@ -170,9 +184,9 @@ export async function apiRequestPaginated<T>(
     clearTimeout(timeout)
   }
 
-  if (response.status === 401) {
+  if (response.status === 401 && allowRefresh) {
     const refreshed = await refreshOnce()
-    if (refreshed) return apiRequestPaginated<T>(path, init)
+    if (refreshed) return apiRequestPaginated<T>(path, init, false)
   }
 
   const body = (await response.json().catch(() => null)) as {

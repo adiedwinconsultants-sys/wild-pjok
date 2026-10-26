@@ -9,11 +9,12 @@ export async function cleanupExpiredExports(env: Env): Promise<number> {
 
   do {
     const listed = await env.EXPORTS.list({ prefix: 'exports/', ...(cursor ? { cursor } : {}) })
-    for (const object of listed.objects) {
-      if (object.uploaded.getTime() < cutoff) {
-        await env.EXPORTS.delete(object.key)
-        deleted += 1
-      }
+    const expiredKeys = listed.objects
+      .filter((object) => object.uploaded.getTime() < cutoff)
+      .map((object) => object.key)
+    if (expiredKeys.length > 0) {
+      await env.EXPORTS.delete(expiredKeys)
+      deleted += expiredKeys.length
     }
     cursor = listed.truncated ? listed.cursor : undefined
   } while (cursor)

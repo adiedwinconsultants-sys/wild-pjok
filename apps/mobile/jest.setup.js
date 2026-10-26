@@ -30,3 +30,13 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(async () => undefined),
   deleteItemAsync: jest.fn(async () => undefined),
 }))
+
+jest.mock('@react-native-community/datetimepicker', () => ({
+  __esModule: true,
+  default: (props) =>
+    require('react').createElement(require('react-native').View, {
+      ...props,
+      testID: 'native-date-picker',
+    }),
+  DateTimePickerAndroid: { open: jest.fn() },
+}))

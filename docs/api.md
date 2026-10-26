@@ -12,7 +12,7 @@ Error:
 { "error": { "code": "VALIDATION_ERROR", "message": "…", "details": {}, "requestId": "…" } }
 ```
 
-Autentikasi memakai `Authorization: Bearer <accessToken>`. Access token 15 menit; refresh token opaque 30 hari dan dirotasi.
+Autentikasi memakai `Authorization: Bearer <accessToken>`. Access token 15 menit; refresh token opaque 30 hari dan dirotasi. Token akses terikat pada sesi D1 aktif; logout, pencabutan sesi, reuse refresh, dan reset sandi langsung menolak token akses lama. Peran diambil dari akun terbaru, sehingga perubahan peran langsung berlaku. Respons autentikasi memakai `private, no-store`. Token lama tanpa klaim sesi memerlukan login ulang.
 
 ## Pagination
 
@@ -30,7 +30,7 @@ Autentikasi memakai `Authorization: Bearer <accessToken>`. Access token 15 menit
 | PATCH | `/auth/me` | `{ name?, nip?, school? }` |
 | DELETE | `/auth/sessions` | Cabut semua sesi guru |
 | POST | `/auth/forgot-password` | `{ email }` → 202 netral; `devToken` hanya `APP_ENV=local` |
-| POST | `/auth/reset-password` | `{ token, password }`, token sekali pakai |
+| POST | `/auth/reset-password` | `{ token, password }`, token sekali pakai; keberhasilan membatalkan seluruh token pemulihan dan sesi akun |
 
 Rate limit: login 10/menit per IP+email, forgot-password 3/15 menit, register 5/10 menit per IP+email.
 
@@ -99,10 +99,11 @@ Aturan penting:
 
 | Method | Path | Keterangan |
 | --- | --- | --- |
-| POST | `/exports` | `{ assessmentId, format: "xlsx"\|"pdf" }` → job selesai + metadata |
+| POST | `/exports` | `{ assessmentId, format: "xlsx"\|"pdf" }` → job selesai + metadata; asesmen harus final/dibuka ulang |
 | GET | `/exports/:id` | Status job + `downloadUrl` |
-| GET | `/exports/:id/download` | Unduh berkas (Bearer) |
+| GET | `/exports/:id/download` | Unduh berkas (Bearer), hanya pemilik; respons `private, no-store` |
 
+Pembuatan laporan dibatasi 5 kali per guru per menit. Asesmen draf menghasilkan 409 `ASSESSMENT_NOT_FINALIZED`.
 Job milik guru lain → 403. Berkas R2 dibersihkan otomatis setelah 30 hari oleh scheduled handler.
 
 ## Health
@@ -130,10 +131,20 @@ Job milik guru lain → 403. Berkas R2 dibersihkan otomatis setelah 30 hari oleh
 | `CLASS_DUPLICATE` / `STUDENT_DUPLICATE` | 409 | Duplikat unik |
 | `CLASS_HAS_ASSESSMENTS` / `STUDENT_HAS_RESULTS` | 409 | Hapus ditolak |
 | `ASSESSMENT_FINALIZED` | 409 | Edit setelah final |
-| `ASSESSMENT_NOT_FINALIZED` | 409 | Feedback sebelum final |
+| `ASSESSMENT_NOT_FINALIZED` | 409 | Operasi laporan atau umpan balik memerlukan asesmen final |
 | `INCOMPLETE_SCORES` | 422 | Finalisasi kurang indikator |
 | `SCORE_INVALID` | 422 | Skor di luar aturan instrumen |
 | `IMPORT_INVALID` | 422 | File impor tidak valid |
 | `PAYLOAD_TOO_LARGE` | 413 | Berkas > 2 MB |
 | `EXPORT_FAILED` | 500 | Pembuatan laporan gagal |
 | `INTERNAL_ERROR` | 500 | Kesalahan tak terduga |
+
+Batas autentikasi KV diterapkan per akun dan per IP: login 10/menit per email dan 100/menit per IP; registrasi 5/10 menit per email dan 20/10 menit per IP; pemulihan 3/15 menit per email dan 20/15 menit per IP. KV bersifat eventually consistent, sehingga batas ini best-effort untuk permintaan serentak.
+
+Semua respons menggunakan `Cache-Control: private, no-store` dan `X-Content-Type-Options: nosniff`. `X-Request-Id` dibuat server. Asesmen dengan peserta yang tidak sesuai guru/kelas menghasilkan 409 `ASSESSMENT_PARTICIPANTS_INVALID` tanpa mengembalikan data siswa.
+
+Impor siswa menerima arsip XLSX hingga 2 MB, maksimum 1.000 baris siswa dan 4 kolom pada lembar pertama. Unggahan multipart dibatasi 2 MB + 64 KB metadata, 128 entri arsip, dan 8 MB total hasil dekompresi. Enkripsi, ZIP64, arsip rusak, sel formula, serta format lain yang hanya diberi ekstensi `.xlsx` ditolak dengan 422. Ukuran arsip berlebihan menghasilkan 413. `dryRun` hanya menerima `true`/`false` (default `true`). Impor dibatasi 10 permintaan per guru per menit. Konflik NIS saat penyimpanan menghasilkan 409 `STUDENT_DUPLICATE` dan meminta pratinjau ulang.
+
+Finalisasi memakai versi mutasi internal dan menulis status beserta hasil dalam satu batch D1. Jika nilai/status berubah selama penghitungan, API mengembalikan 409 `ASSESSMENT_CONFLICT`; muat ulang lalu ulangi tindakan. Reopen serentak hanya mencatat satu audit. Kelas dengan asesmen `reopened` tetap tidak dapat dihapus (`CLASS_HAS_ASSESSMENTS`). Siswa yang dipakai dalam draf juga tidak dapat dihapus (`STUDENT_HAS_RESULTS`); hapus kelas yang hanya berisi draf bila seluruh draf memang ingin dibuang.
+
+Tanggal lahir siswa harus berupa tanggal kalender valid dan tidak melebihi hari ini dalam Asia/Jakarta. Aturan yang sama berlaku pada tambah/ubah manual dan impor Excel.

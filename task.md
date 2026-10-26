@@ -268,6 +268,7 @@ Legenda fase:
 - [x] **6.15** Test ekspor: XLSX dapat dibaca ulang dan berisi N baris siswa; PDF mulai dengan `%PDF-` dan > 1 halaman.
 - [x] **6.16** Test otorisasi: guru lain tidak bisa mengunduh hasil ekspor (403).
 - [x] **6.17** Bersihkan file R2 kedaluwarsa (cron/scheduled handler) setelah 30 hari.
+- [x] **6.18** Perbaiki perakitan URL unduhan ekspor di mobile agar base API `/v1` dan `downloadUrl` `/v1/exports/:id/download` tidak menghasilkan `/v1/v1/`; verifikasi dengan test regresi.
 
 ## Fase 7 — Deploy Cloudflare & build aplikasi
 
@@ -291,7 +292,7 @@ Legenda fase:
 - [x] **7.18** Selaraskan dependency Expo/Cloudflare dan verifikasi frozen install, peer dependency, typecheck, lint, test, serta build production Android.
   - [x] **7.18a** Selaraskan dependency dan konfigurasi; verifikasi frozen install, peer dependency, Expo Doctor, typecheck, lint, dan test.
   - [x] **7.18b** Verifikasi bundle production, persiapan native, dan build Android EAS production; dokumentasikan hasil.
-- [ ] **7.19** Build APK Android profil `production-apk` dengan API production; verifikasi status EAS dan tautan artefak APK.
+- [x] **7.19** Build APK Android profil `production-apk` dengan API production; verifikasi status EAS dan tautan artefak APK.
 
 ## Fase 8 — QA, dokumentasi, rilis
 
@@ -316,6 +317,25 @@ Legenda fase:
   - [x] **8.16c** Layar utama: Kelas, Asesmen, Riwayat, Profil, detail kelas, katalog, wizard, input nilai, hasil.
   - [x] **8.16d** Verifikasi `typecheck`, `lint`, dan test mobile setelah redesign.
 - [x] **8.17** Rapikan tampilan lembar nilai: header gelap terbaca, indikator dalam satu kartu ringkas tanpa duplikasi satuan/arah, penanda wajib berwarna bahaya, progres siswa selesai berwarna hijau.
+- [x] **8.18** Audit bug, keamanan, dan performa aplikasi; perbaiki temuan yang terverifikasi.
+  - [x] **8.18a** Audit dan perbaiki loading serta performa semua alur aplikasi, termasuk cache dan invalidasi setelah mutasi; verifikasi regresi.
+  - [x] **8.18b** Audit dan perbaiki keamanan seluruh alur aplikasi; verifikasi regresi.
+    - [x] **8.18b1** Audit dan perbaiki keamanan, akurasi, dan performa pembuatan serta unduhan laporan XLSX/PDF.
+    - [x] **8.18b2** Audit dan perbaiki keamanan alur API/mobile selain laporan, termasuk autentikasi, otorisasi, impor, dan PII.
+    - [x] **8.18b2a** Perbaiki advisory dependency runtime yang tersisa pada Drizzle ORM dan Zod; verifikasi kompatibilitas seluruh consumer.
+    - [x] **8.18b2b** Audit dan perbaiki keamanan alur autentikasi, sesi, registrasi, reset sandi, dan administrasi akun.
+    - [x] **8.18b2c** Audit otorisasi kepemilikan resource dan kebocoran PII pada respons, log, serta penyimpanan mobile.
+    - [x] **8.18b2d** Audit dan perkuat impor Excel siswa terhadap file berbahaya, ukuran, dan konsumsi resource.
+    - [x] **8.18b2e** Triage dan perbaiki advisory dependency transitive Expo (`ws`, `node-forge`) tanpa merusak toolchain yang didukung.
+
+    - [x] **8.18b2f** Audit dependency toolchain lain; terapkan pembaruan yang kompatibel dan dokumentasikan risiko upstream yang tersisa.
+  - [x] **8.18c** Audit dan perbaiki konsistensi asesmen final, draf, dan penghapusan data terkait; verifikasi regresi.
+    - [x] **8.18c1** Jaga finalisasi atomik terhadap simpan nilai serentak dan cegah penghapusan riwayat asesmen.
+    - [x] **8.18c2** Perbaiki pemulihan draf, konflik server, dan kegagalan simpan sebelum finalisasi; verifikasi regresi.
+  - [x] **8.18d** Pecah modul route dan gaya layar yang melewati batas ukuran repo; verifikasi regresi akhir.
+- [x] **8.19** Permudah tanggal lahir siswa dengan date picker; verifikasi tambah/ubah, tanggal tidak valid, dan aksesibilitas.
+- [x] **8.20** Permudah input kelas dengan pilihan tingkat dan tahun ajaran; pertahankan data saat ubah dan verifikasi formulir.
+- [ ] **8.21** BLOCKED: menunggu rilis Expo CLI dengan perbaikan Zod 3 yang kompatibel. Ganti Zod 3.25.76 bawaan CLI dan verifikasi toolchain tanpa override major.
 
 ## Fase 9 — WorkOS, registrasi pengguna, superadmin
 

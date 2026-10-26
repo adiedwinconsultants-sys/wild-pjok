@@ -135,6 +135,7 @@ export const assessments = sqliteTable(
     instrumentId: text('instrument_id').notNull(),
     instrumentSnapshotJson: text('instrument_snapshot_json').notNull(),
     participantIdsJson: text('participant_ids_json').notNull().default('[]'),
+    mutationVersion: text('mutation_version').notNull().default(''),
     date: text('date').notNull(),
     status: text('status', { enum: ['draft', 'finalized', 'reopened'] })
       .notNull()

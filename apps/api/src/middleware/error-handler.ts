@@ -44,8 +44,8 @@ export const errorHandler: ErrorHandler<AppBindings> = (error, c) => {
       level: 'error',
       requestId,
       method: c.req.method,
-      path: c.req.path,
-      message: error instanceof Error ? error.message : 'unknown error',
+      path: c.req.routePath ?? 'unmatched',
+      code: 'INTERNAL_ERROR',
     }),
   )
 

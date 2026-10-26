@@ -3,6 +3,7 @@ import { and, count, desc, eq, like, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { assessmentResults, assessments, classes, students } from '../db/schema'
+import { mapAssessmentWriteError } from '../lib/assessment-write-error'
 import { isUniqueViolation, requireOwnedClass } from '../lib/db-utils'
 import { conflict, notFound } from '../lib/errors'
 import { ok, paginationMeta, parseBody, parseParam, parseQuery } from '../lib/http'
@@ -128,15 +129,17 @@ classRoutes.delete('/:id', async (c) => {
   const finalized = await db
     .select({ total: count() })
     .from(assessments)
-    .where(and(eq(assessments.classId, id), eq(assessments.status, 'finalized')))
+    .where(
+      and(eq(assessments.classId, id), sql`${assessments.status} in ('finalized', 'reopened')`),
+    )
   if ((finalized[0]?.total ?? 0) > 0) {
     throw conflict(
       'CLASS_HAS_ASSESSMENTS',
-      'Kelas tidak dapat dihapus karena sudah memiliki asesmen final',
+      'Kelas tidak dapat dihapus karena sudah memiliki riwayat asesmen final',
     )
   }
 
-  await db.delete(classes).where(eq(classes.id, id))
+  await db.delete(classes).where(eq(classes.id, id)).catch(mapAssessmentWriteError)
   return c.body(null, 204)
 })
 

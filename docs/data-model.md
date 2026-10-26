@@ -47,3 +47,5 @@ users 1─* audit_logs
 5. **PII.** Nama/NIS tidak boleh masuk log, pesan error, atau analytics. Log hanya method/path/status/duration/requestId.
 6. **Peserta.** `participant_ids_json` membatasi siswa yang dinilai pada asesmen tersebut; validasi saat pembuatan memastikan siswa milik kelas.
 7. **Migrasi append-only.** Migrasi yang sudah diterapkan tidak boleh diubah; perubahan skema membuat migrasi baru.
+
+Migrasi `0003_assessment_mutation_guard.sql` menambah `assessments.mutation_version` (default kosong, tanpa backfill khusus). Simpan nilai mengganti versi dalam batch yang sama; finalisasi melakukan compare-and-set dan insert hasil bersyarat dengan token versi baru. Trigger menolak insert/update/delete skor final, penghapusan asesmen final/reopened, dan penghapusan siswa yang masih menjadi peserta. Cascade kelas yang hanya berisi draf tetap diizinkan. Reopen mengubah versi dan menulis audit bersyarat dalam satu batch.

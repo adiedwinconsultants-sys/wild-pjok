@@ -64,7 +64,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   option: {
-    minHeight: 36,
+    minHeight: 44,
+    minWidth: 44,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
     alignItems: 'center',

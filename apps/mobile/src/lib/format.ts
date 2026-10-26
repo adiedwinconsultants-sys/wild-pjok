@@ -29,10 +29,7 @@ export function formatDate(value: string): string {
 }
 
 export function todayIso(): string {
-  const now = new Date()
-  const offset = now.getTimezoneOffset()
-  const local = new Date(now.getTime() - offset * 60_000)
-  return local.toISOString().slice(0, 10)
+  return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10)
 }
 
 export function formatScore(value: number | null | undefined): string {
@@ -53,8 +50,9 @@ export function kindLabel(kind: ScoreKind): string {
 }
 
 export function academicYearNow(): string {
-  const year = new Date().getFullYear()
-  const month = new Date().getMonth() + 1
+  const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth() + 1
   const start = month >= 7 ? year : year - 1
   return `${start}/${start + 1}`
 }

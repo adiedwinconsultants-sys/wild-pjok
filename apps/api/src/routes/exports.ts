@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { exportJobs } from '../db/schema'
 import { AppError, notFound } from '../lib/errors'
 import { ok, parseBody, parseParam } from '../lib/http'
+import { checkRateLimit } from '../lib/rate-limit'
 import { nowIso } from '../lib/time'
 import { requireAuth } from '../middleware/auth'
 import { buildPdf } from '../reports/pdf'
@@ -19,12 +20,12 @@ exportRoutes.post('/', async (c) => {
   const db = c.get('db')
   const user = c.get('user')
   const body = await parseBody(c, exportRequestSchema)
+  await checkRateLimit(env, 'exports', user.id, 5, 60)
 
   const { report, assessmentId } = await buildReportData(db, user, {
     ...(body.assessmentId ? { assessmentId: body.assessmentId } : {}),
     ...(body.classId ? { classId: body.classId } : {}),
   })
-
   const jobId = crypto.randomUUID()
   const timestamp = nowIso()
   const fileName = reportFileName(report, body.format)
@@ -85,7 +86,8 @@ exportRoutes.post('/', async (c) => {
         level: 'error',
         requestId: c.get('requestId'),
         action: 'export.build',
-        message: error instanceof Error ? error.message : 'unknown',
+        code: 'EXPORT_FAILED',
+        errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
       }),
     )
     throw new AppError(500, 'EXPORT_FAILED', 'Gagal membuat berkas laporan')
@@ -149,6 +151,7 @@ exportRoutes.get('/:id/download', async (c) => {
   return c.body(object.body, 200, {
     'Content-Type': object.httpMetadata?.contentType ?? contentType,
     'Content-Disposition': `attachment; filename="${fileName}"`,
-    'Cache-Control': 'private, max-age=60',
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
   })
 })

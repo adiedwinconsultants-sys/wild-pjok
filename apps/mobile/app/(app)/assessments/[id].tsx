@@ -1,8 +1,7 @@
 import { type RawScoreInput, ScoringError, type Sex, computeAssessment } from '@pjok/shared'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import {
   Badge,
   Button,
@@ -15,21 +14,18 @@ import {
   StatusBadge,
   TextField,
 } from '../../../src/components'
+import { assessmentInputStyles as styles } from '../../../src/features/assessments/assessment-input-styles'
 import {
   useAssessment,
   useFinalizeAssessment,
   useSaveScores,
 } from '../../../src/features/assessments/hooks'
+import { scoreKey } from '../../../src/features/assessments/score-draft'
+import { useScoreDraft } from '../../../src/features/assessments/use-score-draft'
 import { errorMessage } from '../../../src/lib/api'
 import { formatDate, formatScore } from '../../../src/lib/format'
-import { colors, radius, spacing, typography } from '../../../src/theme/tokens'
-
-type DraftValues = Record<string, string>
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
-
-function scoreKey(studentId: string, indicatorId: string): string {
-  return `${studentId}:${indicatorId}`
-}
+import { removeOfflineCache } from '../../../src/lib/offline-cache'
+import { colors } from '../../../src/theme/tokens'
 
 function ageAt(birthDate: string, date: string): number {
   const birth = new Date(`${birthDate}T00:00:00Z`)
@@ -47,87 +43,26 @@ export default function AssessmentInputScreen() {
   const saveScores = useSaveScores(assessmentId)
   const finalize = useFinalizeAssessment(assessmentId)
 
-  const [draft, setDraft] = useState<DraftValues>({})
-  const [status, setStatus] = useState<SaveStatus>('idle')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
-  const hydrated = useRef(false)
-  const dirty = useRef(false)
-  const draftRef = useRef<DraftValues>({})
-  const saveRef = useRef(saveScores.mutateAsync)
-  saveRef.current = saveScores.mutateAsync
+  const {
+    draft,
+    status,
+    error: saveError,
+    warning,
+    ready,
+    onChangeValue,
+    persistDraft,
+  } = useScoreDraft(assessmentId, assessment.data, saveScores.mutateAsync)
 
   const editable = assessment.data?.status !== 'finalized'
   const instrument = assessment.data?.instrument
   const participants = assessment.data?.participants ?? []
 
   useEffect(() => {
-    if (!assessment.data || hydrated.current) return
-    const localKey = `pjok.draft.${assessmentId}`
-    const serverDraft: DraftValues = {}
-    for (const score of assessment.data.scores) {
-      serverDraft[scoreKey(score.studentId, score.indicatorId)] = String(score.rawValue)
-    }
-    const load = async () => {
-      const stored = await AsyncStorage.getItem(localKey)
-      let merged = serverDraft
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as DraftValues
-          merged = { ...serverDraft, ...parsed }
-        } catch {
-          merged = serverDraft
-        }
-      }
-      setDraft(merged)
-      draftRef.current = merged
-      setSelectedStudentId(assessment.data?.participants[0]?.id ?? '')
-      hydrated.current = true
-    }
-    void load()
-  }, [assessment.data, assessmentId])
-
-  useEffect(() => {
-    if (!hydrated.current) return
-    draftRef.current = draft
-    void AsyncStorage.setItem(`pjok.draft.${assessmentId}`, JSON.stringify(draft))
-    if (!dirty.current) return
-    const timer = setTimeout(() => {
-      void persistDraft()
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [draft, assessmentId])
-
-  async function persistDraft(): Promise<void> {
-    if (!instrument) return
-    const scores = Object.entries(draftRef.current)
-      .filter(([, value]) => value.trim() !== '' && !Number.isNaN(Number(value)))
-      .map(([key, value]) => {
-        const [studentId, indicatorId] = key.split(':')
-        return {
-          studentId: studentId ?? '',
-          indicatorId: indicatorId ?? '',
-          rawValue: Number(value),
-        }
-      })
-      .filter((score) => score.studentId && score.indicatorId)
-    if (scores.length === 0) return
-    setStatus('saving')
-    try {
-      await saveRef.current(scores)
-      dirty.current = false
-      setStatus('saved')
-    } catch (error) {
-      setStatus('error')
-      setActionError(errorMessage(error))
-    }
-  }
-
-  const onChangeValue = (studentId: string, indicatorId: string, value: string) => {
-    dirty.current = true
-    setStatus('idle')
-    setDraft((current) => ({ ...current, [scoreKey(studentId, indicatorId)]: value }))
-  }
+    if (!selectedStudentId && assessment.data?.participants[0])
+      setSelectedStudentId(assessment.data.participants[0].id)
+  }, [assessment.data, selectedStudentId])
 
   const filledFor = (studentId: string): number => {
     if (!instrument) return 0
@@ -189,7 +124,7 @@ export default function AssessmentInputScreen() {
             try {
               await persistDraft()
               await finalize.mutateAsync()
-              await AsyncStorage.removeItem(`pjok.draft.${assessmentId}`)
+              await removeOfflineCache(`draft:${assessmentId}`)
               router.replace(`/assessments/${assessmentId}/results`)
             } catch (error) {
               setActionError(errorMessage(error))
@@ -200,7 +135,7 @@ export default function AssessmentInputScreen() {
     )
   }
 
-  if (assessment.isLoading) {
+  if (assessment.isLoading || (assessment.data && !ready)) {
     return (
       <Screen>
         <LoadingState message="Memuat asesmen..." />
@@ -378,7 +313,16 @@ export default function AssessmentInputScreen() {
         </>
       ) : null}
 
-      {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
+      {warning ? (
+        <Text accessibilityLiveRegion="polite" style={styles.error}>
+          {warning}
+        </Text>
+      ) : null}
+      {saveError || actionError ? (
+        <Text accessibilityLiveRegion="polite" style={styles.error}>
+          {saveError ?? actionError}
+        </Text>
+      ) : null}
 
       {editable ? (
         <View style={styles.actions}>
@@ -387,7 +331,7 @@ export default function AssessmentInputScreen() {
             variant="secondary"
             fullWidth={false}
             loading={saveScores.isPending}
-            onPress={() => void persistDraft()}
+            onPress={() => void persistDraft().catch(() => undefined)}
             style={styles.flex}
           />
           <Button
@@ -402,55 +346,3 @@ export default function AssessmentInputScreen() {
     </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  board: { gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  flex: { flex: 1, gap: spacing.xs },
-  title: { ...typography.heading, color: colors.textInverse },
-  metaInverse: { ...typography.small, color: 'rgba(255, 255, 255, 0.72)', lineHeight: 20 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  statusDot: { width: 7, height: 7, borderRadius: radius.pill },
-  saveStatus: { ...typography.label, color: 'rgba(250, 246, 234, 0.62)' },
-  studentTabs: { gap: spacing.sm, marginTop: spacing.lg, paddingRight: spacing.lg },
-  studentTab: {
-    minWidth: 132,
-    minHeight: 52,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    gap: 2,
-  },
-  studentTabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  studentTabName: { ...typography.small, color: colors.text, maxWidth: 156 },
-  studentTabNameActive: { color: colors.textInverse },
-  studentTabProgress: { ...typography.label, color: colors.textMuted },
-  studentTabProgressDone: { color: colors.success },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  sectionMeta: { ...typography.small, color: colors.textMuted },
-  sheet: { marginTop: spacing.sm, padding: 0, gap: 0, overflow: 'hidden' },
-  sheetRow: { padding: spacing.lg, gap: spacing.sm },
-  sheetDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  sheetRowMissing: { backgroundColor: colors.dangerSoft },
-  indicatorIndex: { ...typography.monoStrong, color: colors.accent },
-  indicatorIndexMissing: { color: colors.danger },
-  indicatorName: { ...typography.subheading, color: colors.text, flex: 1 },
-  indicatorDescription: { ...typography.small, color: colors.textMuted, lineHeight: 20 },
-  previewCard: { marginTop: spacing.lg, gap: spacing.sm },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  previewScore: { ...typography.display, color: colors.highlight, fontSize: 62, lineHeight: 60 },
-  previewMeta: { ...typography.small, color: 'rgba(250, 246, 234, 0.68)' },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl },
-  error: { ...typography.small, color: colors.danger, marginTop: spacing.md },
-})

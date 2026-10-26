@@ -1,5 +1,5 @@
 import type { Context } from 'hono'
-import type { ZodType, ZodTypeDef } from 'zod'
+import type { ZodType } from 'zod'
 import { z } from 'zod'
 import { validationError } from './errors'
 
@@ -17,15 +17,12 @@ export function ok<T>(c: Context, data: T, meta?: Meta) {
   return c.json({ data })
 }
 
-export async function parseBody<T>(
-  c: Context,
-  schema: ZodType<T, ZodTypeDef, unknown>,
-): Promise<T> {
+export async function parseBody<T>(c: Context, schema: ZodType<T, unknown>): Promise<T> {
   const raw = await safeJson(c)
   return validate(schema, raw)
 }
 
-export function parseQuery<T>(c: Context, schema: ZodType<T, ZodTypeDef, unknown>): T {
+export function parseQuery<T>(c: Context, schema: ZodType<T, unknown>): T {
   const query = c.req.query()
   const normalized: Record<string, string> = {}
   for (const [key, value] of Object.entries(query)) {
@@ -42,7 +39,7 @@ export function parseParam(c: Context, name: string): string {
   return value
 }
 
-function validate<T>(schema: ZodType<T, ZodTypeDef, unknown>, raw: unknown): T {
+function validate<T>(schema: ZodType<T, unknown>, raw: unknown): T {
   const result = schema.safeParse(raw)
   if (!result.success) {
     throw validationError('Data yang dikirim tidak valid', {

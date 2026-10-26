@@ -1,10 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type ClassCreateInput, classCreateSchema } from '@pjok/shared'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useEffect, useRef, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { StyleSheet, Text, View } from 'react-native'
-import { Button, Card, LoadingState, Screen, TextField } from '../../src/components'
+import type { z } from 'zod'
+import {
+  AcademicYearField,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+  Select,
+  TextField,
+} from '../../src/components'
+import { classNameOptions, gradeOptions } from '../../src/features/classes/class-form-options'
 import { useClass, useCreateClass, useUpdateClass } from '../../src/features/classes/hooks'
 import { errorMessage } from '../../src/lib/api'
 import { academicYearNow } from '../../src/lib/format'
@@ -19,12 +31,13 @@ export default function ClassFormScreen() {
   const updateClass = useUpdateClass(classId)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const hydratedClassId = useRef<string | null>(null)
   const {
     control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<ClassCreateInput>({
+  } = useForm<z.input<typeof classCreateSchema>, undefined, ClassCreateInput>({
     resolver: zodResolver(classCreateSchema),
     defaultValues: {
       name: '',
@@ -34,8 +47,11 @@ export default function ClassFormScreen() {
     },
   })
 
+  const gradeLevel = useWatch({ control, name: 'gradeLevel' })
+
   useEffect(() => {
-    if (existing.data) {
+    if (existing.data && hydratedClassId.current !== classId) {
+      hydratedClassId.current = classId
       reset({
         name: existing.data.name,
         gradeLevel: existing.data.gradeLevel,
@@ -43,7 +59,7 @@ export default function ClassFormScreen() {
         notes: existing.data.notes ?? '',
       })
     }
-  }, [existing.data, reset])
+  }, [existing.data, reset, classId])
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null)
@@ -67,6 +83,22 @@ export default function ClassFormScreen() {
     )
   }
 
+  if (isEdit && existing.isError)
+    return (
+      <Screen>
+        <ErrorState message={errorMessage(existing.error)} onRetry={() => existing.refetch()} />
+      </Screen>
+    )
+  if (isEdit && !existing.data)
+    return (
+      <Screen>
+        <EmptyState
+          title="Kelas tidak ditemukan"
+          message="Kembali ke daftar kelas dan pilih kelas yang masih tersedia."
+        />
+      </Screen>
+    )
+
   return (
     <Screen keyboard>
       <View style={styles.header}>
@@ -78,42 +110,53 @@ export default function ClassFormScreen() {
       <Card>
         <Controller
           control={control}
-          name="name"
+          name="gradeLevel"
           render={({ field }) => (
-            <TextField
-              label="Nama kelas"
-              placeholder="Contoh: VII A"
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={errors.name?.message}
+            <Select
+              label="Tingkat kelas"
+              value={String(field.value)}
+              options={gradeOptions}
+              onChange={(value) => {
+                field.onChange(Number(value))
+                field.onBlur()
+              }}
+              error={errors.gradeLevel?.message}
             />
           )}
         />
+        <Text style={styles.hint}>1?6 SD ? 7?9 SMP ? 10?12 SMA/SMK</Text>
         <Controller
           control={control}
-          name="gradeLevel"
+          name="name"
           render={({ field }) => (
-            <TextField
-              label="Tingkat"
-              keyboardType="number-pad"
-              value={String(field.value ?? '')}
-              onChangeText={(text) => field.onChange(Number(text))}
-              onBlur={field.onBlur}
-              error={errors.gradeLevel?.message}
-              hint="Isi angka 1 sampai 12."
-            />
+            <View style={styles.nameGroup}>
+              <TextField
+                label="Nama kelas"
+                placeholder={`Contoh: ${classNameOptions(Number(gradeLevel))[0]?.label ?? 'VII A'}`}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                error={errors.name?.message}
+              />
+              <Select
+                label="Nama cepat (opsional)"
+                value={field.value}
+                options={classNameOptions(Number(gradeLevel))}
+                onChange={(value) => {
+                  field.onChange(value)
+                  field.onBlur()
+                }}
+              />
+            </View>
           )}
         />
         <Controller
           control={control}
           name="academicYear"
           render={({ field }) => (
-            <TextField
-              label="Tahun ajaran"
-              placeholder="2025/2026"
+            <AcademicYearField
               value={field.value}
-              onChangeText={field.onChange}
+              onChange={field.onChange}
               onBlur={field.onBlur}
               error={errors.academicYear?.message}
             />
@@ -151,4 +194,6 @@ const styles = StyleSheet.create({
   title: { ...typography.title, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },
   error: { ...typography.small, color: colors.danger },
+  hint: { ...typography.small, color: colors.textMuted },
+  nameGroup: { gap: spacing.md },
 })

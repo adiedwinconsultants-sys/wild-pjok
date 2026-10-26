@@ -1,4 +1,5 @@
 import type { ReportData } from '@pjok/shared'
+import { roundScore } from '@pjok/shared'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 const PAGE_WIDTH = 595.28
@@ -6,6 +7,10 @@ const PAGE_HEIGHT = 841.89
 const MARGIN = 42
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
 const FOOTER_Y = 24
+const numberFormatter = new Intl.NumberFormat('id-ID', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
 export async function buildPdf(report: ReportData): Promise<Uint8Array> {
   const document = await PDFDocument.create()
@@ -15,7 +20,7 @@ export async function buildPdf(report: ReportData): Promise<Uint8Array> {
 
   const regular = await document.embedFont(StandardFonts.Helvetica)
   const bold = await document.embedFont(StandardFonts.HelveticaBold)
-  const state = { page: document.addPage(), y: 0 }
+  const state = { page: document.addPage(), y: PAGE_HEIGHT - MARGIN }
 
   const startPage = () => {
     state.page = document.addPage()
@@ -67,7 +72,6 @@ export async function buildPdf(report: ReportData): Promise<Uint8Array> {
     state.y -= 14
   }
 
-  startPage()
   drawLine('LAPORAN HASIL ASESMEN PENDIDIKAN JASMANI', { size: 14, bold: true, gap: 8 })
   drawLine('Rekapitulasi Nilai Peserta Didik', { size: 11, bold: true, gap: 10 })
   drawKeyValue('Guru', report.teacher.name)
@@ -81,13 +85,14 @@ export async function buildPdf(report: ReportData): Promise<Uint8Array> {
 
   report.students.forEach((student, index) => {
     ensureSpace(90)
+    const scoresByIndicator = new Map(student.scores.map((score) => [score.indicatorId, score]))
     drawLine(`${index + 1}. ${student.fullName} (NIS ${student.nis} / ${student.sex})`, {
       size: 10,
       bold: true,
       gap: 2,
     })
     for (const indicator of report.indicators) {
-      const score = student.scores.find((item) => item.indicatorId === indicator.id)
+      const score = scoresByIndicator.get(indicator.id)
       const raw = score?.rawValue ?? null
       const normalized = score?.normalizedValue ?? null
       const rawText = raw === null ? '-' : `${formatNumber(raw)} ${indicator.unit}`
@@ -184,7 +189,7 @@ function drawPageHeader(
 }
 
 function formatNumber(value: number): string {
-  return (Math.round(value * 100) / 100).toFixed(2)
+  return numberFormatter.format(roundScore(value))
 }
 
 function sanitize(value: string): string {

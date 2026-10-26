@@ -80,6 +80,30 @@ describe('laporan', () => {
     expect(document.getPageCount()).toBeGreaterThan(1)
   })
 
+  it('tidak menambahkan halaman kosong pada laporan satu siswa', async () => {
+    const bytes = await buildPdf(makeReport(1))
+    const document = await PDFDocument.load(bytes)
+
+    expect(document.getPageCount()).toBe(1)
+  })
+
+  it('menulis teks yang diawali tanda sama dengan sebagai teks XLSX', () => {
+    const report = makeReport(1)
+    const student = report.students[0]
+    if (!student) throw new Error('Siswa uji tidak ditemukan')
+    student.fullName = '=HYPERLINK("https://attacker.example")'
+    student.feedback = '=1+1'
+
+    const workbook = XLSX.read(buildXlsx(report), { type: 'array', cellFormula: true })
+    const nameCell = workbook.Sheets.Rekap?.B11
+    const feedbackCell = workbook.Sheets['Umpan Balik']?.E5
+
+    expect(nameCell?.t).toBe('s')
+    expect(nameCell?.f).toBeUndefined()
+    expect(feedbackCell?.t).toBe('s')
+    expect(feedbackCell?.f).toBeUndefined()
+  })
+
   it('memberi nama berkas sesuai format', () => {
     const report = makeReport(1)
     expect(reportFileName(report, 'xlsx')).toBe('rekap-vii-a-tksi-kekuatan-2026-10-01.xlsx')

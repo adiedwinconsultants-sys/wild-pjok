@@ -1,7 +1,7 @@
 import type { LoginInput, ProfileUpdateInput, RegisterInput, Teacher } from '@pjok/shared'
 import { create } from 'zustand'
 import { apiRequest, clearSession, getRefreshToken, hydrateTokens, persistSession } from './api'
-import { clearOfflineCache } from './offline-cache'
+import { clearOfflineCache, setOfflineCacheOwner } from './offline-cache'
 import { queryClient } from './query-client'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -29,6 +29,7 @@ async function applySession(response: LoginResponse): Promise<Teacher> {
     refreshToken: response.refreshToken,
   })
   await clearOfflineCache()
+  setOfflineCacheOwner(response.user.id)
   queryClient.clear()
   return response.user
 }
@@ -41,12 +42,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const hasTokens = await hydrateTokens()
       if (!hasTokens) {
+        setOfflineCacheOwner(null)
+        await clearOfflineCache()
         set({ status: 'unauthenticated', user: null })
         return
       }
       const user = await apiRequest<Teacher>('/auth/me')
+      setOfflineCacheOwner(user.id)
       set({ status: 'authenticated', user })
     } catch {
+      setOfflineCacheOwner(null)
+      await clearOfflineCache()
       await clearSession()
       set({ status: 'unauthenticated', user: null })
     }
@@ -71,6 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    setOfflineCacheOwner(null)
     const token = getRefreshToken()
     try {
       await apiRequest<void>('/auth/logout', {
@@ -80,6 +87,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // Sesi lokal tetap dibersihkan meski server tidak dapat dihubungi.
     } finally {
+      await queryClient.cancelQueries()
       await clearSession()
       await clearOfflineCache()
       queryClient.clear()

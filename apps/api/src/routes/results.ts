@@ -3,9 +3,13 @@ import { SCORE_CATEGORY_LABELS } from '@pjok/shared'
 import type { Instrument } from '@pjok/shared'
 import { eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { assessmentFeedback, assessmentResults, assessmentScores, students } from '../db/schema'
-import { parseInstrumentSnapshot, requireOwnedAssessment } from '../lib/assessment-helpers'
-import { conflict, notFound } from '../lib/errors'
+import { assessmentFeedback, assessmentResults, assessmentScores } from '../db/schema'
+import {
+  loadAssessmentParticipants,
+  parseInstrumentSnapshot,
+  requireOwnedAssessment,
+} from '../lib/assessment-helpers'
+import { AppError, conflict, notFound } from '../lib/errors'
 import { ok, parseBody, parseParam } from '../lib/http'
 import { nowIso } from '../lib/time'
 import { requireAuth } from '../middleware/auth'
@@ -37,11 +41,18 @@ assessmentResultRoutes.get('/:id/results', async (c) => {
     .select()
     .from(assessmentScores)
     .where(eq(assessmentScores.assessmentId, id))
-  const studentIds = results.map((row) => row.studentId)
-  const studentRows =
-    studentIds.length > 0
-      ? await db.select().from(students).where(inArray(students.id, studentIds))
-      : []
+  const studentRows = await loadAssessmentParticipants(db, assessment)
+  const allowed = new Set(studentRows.map((row) => row.id))
+  if (
+    results.some((row) => !allowed.has(row.studentId)) ||
+    scoreRows.some((row) => !allowed.has(row.studentId))
+  ) {
+    throw new AppError(
+      409,
+      'ASSESSMENT_PARTICIPANTS_INVALID',
+      'Daftar peserta asesmen tidak sesuai dengan kelas. Hubungi administrator.',
+    )
+  }
   const studentMap = new Map(studentRows.map((student) => [student.id, student]))
   const feedbackMap = new Map(feedbackRows.map((row) => [row.resultId, row.note]))
 

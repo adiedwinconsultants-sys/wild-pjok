@@ -16,7 +16,7 @@ import {
   parseParticipantIds,
   requireOwnedAssessment,
 } from '../lib/assessment-helpers'
-import { notFound } from '../lib/errors'
+import { AppError, notFound } from '../lib/errors'
 import { nowIso } from '../lib/time'
 import type { AuthUser } from '../types'
 
@@ -57,14 +57,26 @@ export async function buildReportData(
     throw notFound('ASSESSMENT_NOT_FOUND', 'Asesmen tidak ditemukan')
   }
 
+  if (assessment.status !== 'finalized' && assessment.status !== 'reopened') {
+    throw new AppError(
+      409,
+      'ASSESSMENT_NOT_FINALIZED',
+      'Laporan hanya tersedia untuk asesmen yang sudah difinalisasi',
+    )
+  }
+
   const teacherRows = await db
-    .select()
+    .select({ name: users.name, nip: users.nip, school: users.school })
     .from(users)
     .where(eq(users.id, assessment.teacherId))
     .limit(1)
   const teacher = teacherRows[0]
   const classRows = await db
-    .select()
+    .select({
+      name: classes.name,
+      gradeLevel: classes.gradeLevel,
+      academicYear: classes.academicYear,
+    })
     .from(classes)
     .where(eq(classes.id, assessment.classId))
     .limit(1)
@@ -77,16 +89,37 @@ export async function buildReportData(
   const participantIds = parseParticipantIds(assessment.participantIdsJson)
   const participantRows =
     participantIds.length > 0
-      ? await db.select().from(students).where(inArray(students.id, participantIds))
+      ? await db
+          .select({
+            id: students.id,
+            fullName: students.fullName,
+            nis: students.nis,
+            sex: students.sex,
+          })
+          .from(students)
+          .where(
+            and(
+              inArray(students.id, participantIds),
+              eq(students.classId, assessment.classId),
+              eq(students.teacherId, assessment.teacherId),
+            ),
+          )
       : []
   const resultRows = await db
-    .select()
+    .select({
+      id: assessmentResults.id,
+      studentId: assessmentResults.studentId,
+      processScore: assessmentResults.processScore,
+      productScore: assessmentResults.productScore,
+      finalScore: assessmentResults.finalScore,
+      category: assessmentResults.category,
+    })
     .from(assessmentResults)
     .where(eq(assessmentResults.assessmentId, assessment.id))
   const feedbackRows =
     resultRows.length > 0
       ? await db
-          .select()
+          .select({ resultId: assessmentFeedback.resultId, note: assessmentFeedback.note })
           .from(assessmentFeedback)
           .where(
             inArray(
@@ -96,10 +129,24 @@ export async function buildReportData(
           )
       : []
   const scoreRows = await db
-    .select()
+    .select({
+      studentId: assessmentScores.studentId,
+      indicatorId: assessmentScores.indicatorId,
+      rawValue: assessmentScores.rawValue,
+      normalizedValue: assessmentScores.normalizedValue,
+    })
     .from(assessmentScores)
     .where(eq(assessmentScores.assessmentId, assessment.id))
 
+  const scoreByStudent = new Map<string, Map<string, (typeof scoreRows)[number]>>()
+  for (const score of scoreRows) {
+    const scoresByIndicator = scoreByStudent.get(score.studentId)
+    if (scoresByIndicator) {
+      scoresByIndicator.set(score.indicatorId, score)
+    } else {
+      scoreByStudent.set(score.studentId, new Map([[score.indicatorId, score]]))
+    }
+  }
   const resultByStudent = new Map(resultRows.map((row) => [row.studentId, row]))
   const feedbackByResult = new Map(feedbackRows.map((row) => [row.resultId, row.note]))
   const categoryLabels = new Map(
@@ -109,10 +156,9 @@ export async function buildReportData(
   const studentReports: ReportStudent[] = participantRows
     .map((student) => {
       const result = resultByStudent.get(student.id)
+      const studentScores = scoreByStudent.get(student.id)
       const scores = instrument.indicators.map((indicator) => {
-        const score = scoreRows.find(
-          (row) => row.studentId === student.id && row.indicatorId === indicator.id,
-        )
+        const score = studentScores?.get(indicator.id)
         return {
           indicatorId: indicator.id,
           rawValue: score?.rawValue ?? null,
@@ -137,15 +183,20 @@ export async function buildReportData(
     })
     .sort((a, b) => a.fullName.localeCompare(b.fullName, 'id'))
 
-  const scores = studentReports.map((student) => student.finalScore)
   const distribution: Record<ScoreCategory, number> = {
     sangat_baik: 0,
     baik: 0,
     cukup: 0,
     perlu_bimbingan: 0,
   }
+  let scoreTotal = 0
+  let minScore = Number.POSITIVE_INFINITY
+  let maxScore = Number.NEGATIVE_INFINITY
   for (const student of studentReports) {
     distribution[student.category] += 1
+    scoreTotal += student.finalScore
+    minScore = Math.min(minScore, student.finalScore)
+    maxScore = Math.max(maxScore, student.finalScore)
   }
 
   return {
@@ -174,12 +225,9 @@ export async function buildReportData(
       })),
       students: studentReports,
       summary: {
-        average:
-          scores.length > 0
-            ? roundScore(scores.reduce((sum, value) => sum + value, 0) / scores.length)
-            : 0,
-        min: scores.length > 0 ? Math.min(...scores) : 0,
-        max: scores.length > 0 ? Math.max(...scores) : 0,
+        average: studentReports.length > 0 ? roundScore(scoreTotal / studentReports.length) : 0,
+        min: studentReports.length > 0 ? minScore : 0,
+        max: studentReports.length > 0 ? maxScore : 0,
         distribution,
       },
     },
